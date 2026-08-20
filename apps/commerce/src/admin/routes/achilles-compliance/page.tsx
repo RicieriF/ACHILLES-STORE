@@ -11,6 +11,14 @@ import { sdk } from "../../lib/sdk";
 import type { ProductPolicy } from "../../lib/types";
 
 type PolicyList = { policies: ProductPolicy[] };
+type AuditList = {
+  events: Array<{
+    id: string;
+    summary: string;
+    actor_id?: string | null;
+    created_at: string;
+  }>;
+};
 const labels = {
   PENDING: "Pendente",
   CLEAR: "Liberado",
@@ -30,6 +38,13 @@ const CompliancePage = () => {
   const query = useQuery({
     queryKey: ["achilles-policies"],
     queryFn: () => sdk.client.fetch<PolicyList>("/admin/achilles/policies"),
+  });
+  const history = useQuery({
+    queryKey: ["achilles-compliance-history"],
+    queryFn: () =>
+      sdk.client.fetch<AuditList>("/admin/achilles/audit", {
+        query: { limit: 10 },
+      }),
   });
   const update = useMutation({
     mutationFn: ({
@@ -129,6 +144,26 @@ const CompliancePage = () => {
           </Container>
         ))
       )}
+      <Container>
+        <Heading level="h2">Histórico administrativo recente</Heading>
+        {history.isPending ? (
+          <Text>Carregando histórico…</Text>
+        ) : history.isError ? (
+          <ErrorState message={String(history.error)} />
+        ) : !history.data.events.length ? (
+          <Text className="text-ui-fg-subtle">Nenhuma decisão registrada.</Text>
+        ) : (
+          history.data.events.map((event) => (
+            <div key={event.id} className="mt-3 border-t pt-3">
+              <Text weight="plus">{event.summary}</Text>
+              <Text className="text-ui-fg-subtle">
+                {new Date(event.created_at).toLocaleString("pt-BR")} ·{" "}
+                {event.actor_id || "ator não disponível"}
+              </Text>
+            </div>
+          ))
+        )}
+      </Container>
     </div>
   );
 };

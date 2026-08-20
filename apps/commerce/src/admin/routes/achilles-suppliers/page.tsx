@@ -276,6 +276,12 @@ const SuppliersPage = () => {
                 <Text className="text-ui-fg-subtle">
                   {supplier.contact_email || "Sem contato informado"}
                 </Text>
+                <Text className="text-ui-fg-subtle">
+                  Criado em{" "}
+                  {new Date(supplier.created_at).toLocaleString("pt-BR")} ·
+                  Atualizado em{" "}
+                  {new Date(supplier.updated_at).toLocaleString("pt-BR")}
+                </Text>
               </div>
               <div className="flex items-center gap-2">
                 <Badge color={supplier.status === "ACTIVE" ? "green" : "grey"}>
