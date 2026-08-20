@@ -1,6 +1,7 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { Badge, Button, Container, Heading, Text } from "@medusajs/ui";
+import { Badge, Button, Container, Heading, Input, Text } from "@medusajs/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   EmptyState,
   ErrorState,
@@ -25,6 +26,7 @@ const colors = {
 
 const CompliancePage = () => {
   const client = useQueryClient();
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const query = useQuery({
     queryKey: ["achilles-policies"],
     queryFn: () => sdk.client.fetch<PolicyList>("/admin/achilles/policies"),
@@ -33,9 +35,11 @@ const CompliancePage = () => {
     mutationFn: ({
       policy,
       status,
+      note,
     }: {
       policy: ProductPolicy;
       status: ProductPolicy["compliance_status"];
+      note: string | null;
     }) =>
       sdk.client.fetch(`/admin/achilles/policies/${policy.id}`, {
         method: "POST",
@@ -43,7 +47,7 @@ const CompliancePage = () => {
           fulfillment_mode: policy.fulfillment_mode,
           compliance_status: status,
           sensitivity: policy.sensitivity,
-          compliance_notes: policy.compliance_notes ?? null,
+          compliance_notes: note,
         },
       }),
     onSuccess: () =>
@@ -69,6 +73,14 @@ const CompliancePage = () => {
                 <Heading level="h2">Produto {policy.product_id}</Heading>
                 <Text>Sensibilidade: {policy.sensitivity}</Text>
                 <Text>{policy.compliance_notes || "Sem observação"}</Text>
+                <Input
+                  className="mt-3"
+                  placeholder="Observação da revisão"
+                  value={notes[policy.id] ?? policy.compliance_notes ?? ""}
+                  onChange={(event) => {
+                    setNotes({ ...notes, [policy.id]: event.target.value });
+                  }}
+                />
               </div>
               <div className="flex max-w-md flex-wrap items-center justify-end gap-2">
                 <Badge color={colors[policy.compliance_status]}>
@@ -78,7 +90,11 @@ const CompliancePage = () => {
                   variant="secondary"
                   disabled={policy.sensitivity !== "ORDINARY"}
                   onClick={() => {
-                    update.mutate({ policy, status: "CLEAR" });
+                    update.mutate({
+                      policy,
+                      status: "CLEAR",
+                      note: notes[policy.id] ?? policy.compliance_notes ?? null,
+                    });
                   }}
                 >
                   Aprovar
@@ -87,7 +103,11 @@ const CompliancePage = () => {
                   variant="secondary"
                   disabled={policy.sensitivity === "CONTROLLED_ITEM"}
                   onClick={() => {
-                    update.mutate({ policy, status: "REVIEW_REQUIRED" });
+                    update.mutate({
+                      policy,
+                      status: "REVIEW_REQUIRED",
+                      note: notes[policy.id] ?? policy.compliance_notes ?? null,
+                    });
                   }}
                 >
                   Marcar revisão
@@ -95,7 +115,11 @@ const CompliancePage = () => {
                 <Button
                   variant="danger"
                   onClick={() => {
-                    update.mutate({ policy, status: "BLOCKED" });
+                    update.mutate({
+                      policy,
+                      status: "BLOCKED",
+                      note: notes[policy.id] ?? policy.compliance_notes ?? null,
+                    });
                   }}
                 >
                   Bloquear

@@ -24,7 +24,100 @@ const blank = {
   provider: "MANUAL",
   country_code: "CN",
   contact_email: "",
+  contact_name: "",
+  contact_phone: "",
   notes: "",
+  metadata_reference: "",
+};
+
+const SupplierEditor = ({ supplier }: { supplier: Supplier }) => {
+  const client = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    name: supplier.name,
+    provider: supplier.provider,
+    country_code: supplier.country_code,
+    contact_name: supplier.contact_name ?? "",
+    contact_email: supplier.contact_email ?? "",
+    contact_phone: supplier.contact_phone ?? "",
+    notes: supplier.notes ?? "",
+    metadata_reference: String(supplier.metadata?.reference ?? ""),
+  });
+  const save = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch(`/admin/achilles/suppliers/${supplier.id}`, {
+        method: "POST",
+        body: {
+          ...form,
+          contact_name: form.contact_name || null,
+          contact_email: form.contact_email || null,
+          contact_phone: form.contact_phone || null,
+          notes: form.notes || null,
+          metadata: form.metadata_reference
+            ? { reference: form.metadata_reference }
+            : {},
+          metadata_reference: undefined,
+        },
+      }),
+    onSuccess: async () => {
+      setEditing(false);
+      await client.invalidateQueries({ queryKey: ["achilles-suppliers"] });
+    },
+  });
+  if (!editing)
+    return (
+      <Button
+        variant="secondary"
+        onClick={() => {
+          setEditing(true);
+        }}
+      >
+        Editar cadastro
+      </Button>
+    );
+  return (
+    <div className="mt-4 grid gap-3 border-t pt-4 md:grid-cols-2">
+      {(
+        [
+          ["Nome", "name"],
+          ["País (ISO-2)", "country_code"],
+          ["Contato", "contact_name"],
+          ["E-mail", "contact_email"],
+          ["Telefone", "contact_phone"],
+          ["Observações", "notes"],
+          ["Referência metadata", "metadata_reference"],
+        ] as const
+      ).map(([placeholder, field]) => (
+        <Input
+          key={field}
+          placeholder={placeholder}
+          value={form[field]}
+          onChange={(event) => {
+            setForm({ ...form, [field]: event.target.value });
+          }}
+        />
+      ))}
+      <div className="flex gap-2">
+        <Button
+          disabled={save.isPending}
+          onClick={() => {
+            save.mutate();
+          }}
+        >
+          Salvar alterações
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setEditing(false);
+          }}
+        >
+          Cancelar
+        </Button>
+      </div>
+      {save.isError && <ErrorState message={String(save.error)} />}
+    </div>
+  );
 };
 
 const SuppliersPage = () => {
@@ -46,7 +139,13 @@ const SuppliersPage = () => {
           ...form,
           status: "ACTIVE",
           contact_email: form.contact_email || null,
+          contact_name: form.contact_name || null,
+          contact_phone: form.contact_phone || null,
           notes: form.notes || null,
+          metadata: form.metadata_reference
+            ? { reference: form.metadata_reference }
+            : {},
+          metadata_reference: undefined,
         },
       }),
     onSuccess: async () => {
@@ -114,6 +213,13 @@ const SuppliersPage = () => {
             }}
           />
           <Input
+            placeholder="Nome do contato"
+            value={form.contact_name}
+            onChange={(event) => {
+              setForm({ ...form, contact_name: event.target.value });
+            }}
+          />
+          <Input
             placeholder="E-mail de contato"
             value={form.contact_email}
             onChange={(event) => {
@@ -121,10 +227,24 @@ const SuppliersPage = () => {
             }}
           />
           <Input
+            placeholder="Telefone"
+            value={form.contact_phone}
+            onChange={(event) => {
+              setForm({ ...form, contact_phone: event.target.value });
+            }}
+          />
+          <Input
             placeholder="Observações"
             value={form.notes}
             onChange={(event) => {
               setForm({ ...form, notes: event.target.value });
+            }}
+          />
+          <Input
+            placeholder="Referência metadata"
+            value={form.metadata_reference}
+            onChange={(event) => {
+              setForm({ ...form, metadata_reference: event.target.value });
             }}
           />
           <Button
@@ -171,6 +291,7 @@ const SuppliersPage = () => {
                 </Button>
               </div>
             </div>
+            <SupplierEditor supplier={supplier} />
           </Container>
         ))
       )}
