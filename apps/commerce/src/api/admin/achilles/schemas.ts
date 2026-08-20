@@ -11,7 +11,7 @@ const decimal = z.string().regex(/^\d+(\.\d{1,4})?$/);
 
 export const supplierInput = z.object({
   name: z.string().trim().min(2).max(160),
-  provider: z.enum(["ALIBABA", "CJ", "OTHER", "MANUAL"]),
+  provider: z.enum(["ALIBABA", "CJ", "BRAZIL_STOCK", "OTHER", "MANUAL"]),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
   country_code: z
     .string()

@@ -11,7 +11,16 @@
         "AUTH_CORS",
         "JWT_SECRET",
         "COOKIE_SECRET",
-        "ALIBABA_*"
+        "ALIBABA_*",
+        "CJ_*",
+        "MERCADO_PAGO_*",
+        "EMAIL_*",
+        "RESEND_*",
+        "PUBLIC_BASE_URL",
+        "STOREFRONT_BASE_URL",
+        "APP_ENV",
+        "VIACEP_ENABLED",
+        "PREFER_BRAZIL_STOCK_WHEN_COMPETITIVE"
       ]
     },
     "dev": {
@@ -24,7 +33,17 @@
         "AUTH_CORS",
         "JWT_SECRET",
         "COOKIE_SECRET",
-        "ALIBABA_*"
+        "ALIBABA_*",
+        "CJ_*",
+        "MERCADO_PAGO_*",
+        "PAYMENT_TEST_*",
+        "EMAIL_*",
+        "RESEND_*",
+        "PUBLIC_BASE_URL",
+        "STOREFRONT_BASE_URL",
+        "APP_ENV",
+        "VIACEP_ENABLED",
+        "PREFER_BRAZIL_STOCK_WHEN_COMPETITIVE"
       ]
     },
     "lint": { "dependsOn": ["^build"] },

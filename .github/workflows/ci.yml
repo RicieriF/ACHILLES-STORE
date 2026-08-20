@@ -31,6 +31,9 @@ jobs:
       COOKIE_SECRET: ci_placeholder_only_minimum_24_chars
       BUSINESS_LOCALE: pt-BR
       DISPLAY_TIMEZONE: America/Sao_Paulo
+      APP_ENV: test
+      PUBLIC_BASE_URL: http://localhost:9000
+      STOREFRONT_BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

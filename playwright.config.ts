@@ -1,10 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const e2eEnvironment = {
+  APP_ENV: "test",
+  PUBLIC_BASE_URL: "http://localhost:9000",
+  STOREFRONT_BASE_URL: "http://localhost:3000",
   PAYMENT_TEST_PROVIDER_ENABLED: "true",
   PAYMENT_TEST_WEBHOOK_SECRET: "playwright_test_webhook_secret_only",
   E2E_ADMIN_PASSWORD: "E2eOnly_012_Strong",
 };
+const reuseE2eServers = process.env.E2E_REUSE_SERVERS === "true";
 Object.assign(process.env, e2eEnvironment);
 
 export default defineConfig({
@@ -18,7 +22,7 @@ export default defineConfig({
     {
       command: "pnpm --filter @achilles/commerce start:e2e",
       url: "http://localhost:9000/ready",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: reuseE2eServers,
       timeout: 240_000,
       env: {
         ...process.env,
@@ -28,7 +32,7 @@ export default defineConfig({
     {
       command: "pnpm --filter @achilles/storefront start",
       url: "http://localhost:3000/api/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: reuseE2eServers,
       timeout: 120_000,
     },
   ],

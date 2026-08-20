@@ -98,6 +98,8 @@ export type ShippingRoutingCandidate = {
   fulfillmentMode: FulfillmentMode;
   dutiesMode: DutiesMode;
   warnings: readonly string[];
+  marginPercent?: number | undefined;
+  reliabilityScore?: number | undefined;
 };
 
 export type SupplierRoutingResult = {

@@ -15,17 +15,38 @@ const disabledByDefault = z
   .enum(["true", "false"])
   .default("false")
   .transform((value) => value === "true");
+const corsOrigins = z
+  .string()
+  .min(1)
+  .refine(
+    (value) =>
+      value
+        .split(",")
+        .map((origin) => origin.trim())
+        .every((origin) => z.url().safeParse(origin).success),
+    "CORS must be a comma-separated list of absolute URLs",
+  );
+const optionalUrl = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.url().optional(),
+);
 const featureFlagSchema = z.object({
   ALIBABA_PRODUCT_IMPORT: disabledByDefault,
   ALIBABA_FREIGHT_QUOTE: disabledByDefault,
   ALIBABA_ORDER_CREATE: disabledByDefault,
   ALIBABA_ORDER_PAY: disabledByDefault,
   ALIBABA_TRACKING: disabledByDefault,
-  CJ_PRODUCT_LOOKUP: disabledByDefault,
-  CJ_SHIPPING_QUOTE: disabledByDefault,
+  CJ_ENABLED: disabledByDefault,
+  CJ_PRODUCT_IMPORT: disabledByDefault,
+  CJ_STOCK: disabledByDefault,
+  CJ_SHIPPING: disabledByDefault,
   CJ_ORDER_CREATE: disabledByDefault,
   CJ_ORDER_PAY: disabledByDefault,
   CJ_TRACKING: disabledByDefault,
+  EMAIL_ENABLED: disabledByDefault,
+  RESEND_ENABLED: disabledByDefault,
+  VIACEP_ENABLED: disabledByDefault,
+  PREFER_BRAZIL_STOCK_WHEN_COMPETITIVE: disabledByDefault,
   MERCADO_PAGO_ENABLED: disabledByDefault,
   MERCADO_PAGO_PIX: disabledByDefault,
   MERCADO_PAGO_CARD: disabledByDefault,
@@ -44,15 +65,21 @@ export const serverEnvironmentSchema = z
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    APP_ENV: z
+      .enum(["development", "test", "staging", "production"])
+      .default("development"),
     DATABASE_URL: z
       .url()
       .startsWith("postgres://")
       .or(z.url().startsWith("postgresql://")),
-    STORE_CORS: z.url(),
-    ADMIN_CORS: z.url(),
-    AUTH_CORS: z.string().min(1),
+    STORE_CORS: corsOrigins,
+    ADMIN_CORS: corsOrigins,
+    AUTH_CORS: corsOrigins,
     JWT_SECRET: z.string().min(24),
     COOKIE_SECRET: z.string().min(24),
+    PUBLIC_BASE_URL: optionalUrl,
+    STOREFRONT_BASE_URL: optionalUrl,
+    REDIS_URL: optionalUrl,
     BUSINESS_LOCALE: z.string().min(2).default("pt-BR"),
     DISPLAY_TIMEZONE: z
       .string()
@@ -69,7 +96,23 @@ export const serverEnvironmentSchema = z
       )
       .default("America/Sao_Paulo"),
   })
-  .and(featureFlagSchema);
+  .and(featureFlagSchema)
+  .superRefine((environment, context) => {
+    if (environment.APP_ENV === "production") {
+      for (const [name, value] of [
+        ["STORE_CORS", environment.STORE_CORS],
+        ["ADMIN_CORS", environment.ADMIN_CORS],
+        ["AUTH_CORS", environment.AUTH_CORS],
+      ] as const) {
+        if (value.includes("*"))
+          context.addIssue({
+            code: "custom",
+            path: [name],
+            message: `${name} cannot contain wildcard in production`,
+          });
+      }
+    }
+  });
 
 export function parseServerEnvironment(
   environment: Readonly<Record<string, string | undefined>>,

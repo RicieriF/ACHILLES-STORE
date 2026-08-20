@@ -201,6 +201,7 @@ const SuppliersPage = () => {
               <Select.Item value="MANUAL">Manual</Select.Item>
               <Select.Item value="OTHER">Outro</Select.Item>
               <Select.Item value="CJ">CJ (somente cadastro)</Select.Item>
+              <Select.Item value="BRAZIL_STOCK">Estoque Brasil</Select.Item>
               <Select.Item value="ALIBABA">
                 Alibaba (somente cadastro)
               </Select.Item>

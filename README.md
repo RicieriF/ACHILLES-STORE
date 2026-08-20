@@ -1,8 +1,8 @@
 # ACHILLES STORE
 
 Commerce core modular do e-commerce outdoor brasileiro. A implementação atual
-cobre Customer Order, planejamento de fulfillment, aprovação humana e execução
-exclusivamente sandbox até a TASK 012.
+cobre catálogo comercial, Customer Order, fulfillment e um Integration Hub
+operacional fail-closed até a TASK 014.
 
 ## Requisitos
 
@@ -17,7 +17,7 @@ exclusivamente sandbox até a TASK 012.
 3. Inicie PostgreSQL com `pnpm docker:up` e aguarde o healthcheck.
 4. Execute migrações oficiais e próprias com `pnpm db:migrate`.
 5. Opcionalmente, carregue os dados fictícios com `pnpm seed`.
-6. Inicie commerce/admin e storefront com `pnpm dev`.
+6. Inicie commerce/admin e storefront com `pnpm dev` ou use `ACHILLES-STORE.bat`.
 
 O `.env` da raiz é a única fonte local do monorepo. Commerce e storefront
 localizam a raiz pelo `pnpm-workspace.yaml`; não copie `.env` para os apps e não
@@ -44,6 +44,11 @@ O seed é idempotente para canal, região, categorias e produtos, recusa `NODE_E
 Abra `http://localhost:9000/app`. As extensões incluem fornecedores, produtos e
 fornecedores, private label, compliance e Importações. As
 APIs próprias ficam sob `/admin/achilles` e exigem autenticação Medusa.
+
+`ACHILLES · Integrações` consolida configuração sanitizada e health de Alibaba,
+CJ, BRAZIL_STOCK, Mercado Pago, shipping, tracking e e-mail. `ACHILLES ·
+Configurações` é somente leitura via ENV; chaves nunca são editadas em plaintext.
+Consulte `docs/DEPLOYMENT.md` para staging, domínio, HTTPS, webhook e rollback.
 
 Com `ALIBABA_PRODUCT_IMPORT=false` (padrão), Importações valida uma URL HTTPS
 Alibaba e cria um draft manual sem chamada externa. Ativar deliberadamente a

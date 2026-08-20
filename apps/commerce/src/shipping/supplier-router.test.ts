@@ -86,4 +86,52 @@ describe("SupplierRouter", () => {
     );
     expect(result.alternatives).toHaveLength(1);
   });
+
+  it("prefere estoque Brasil somente quando competitivo e confiável", () => {
+    const result = new SupplierRouter().route(
+      [
+        candidate({
+          quoteId: "import",
+          deliveredSupplierCostBrl: "30.00",
+          isPrimary: false,
+        }),
+        candidate({
+          quoteId: "brasil",
+          supplierOfferId: "offer-brasil",
+          deliveredSupplierCostBrl: "32.00",
+          estimatedMinimumDays: 2,
+          estimatedMaximumDays: 5,
+          fulfillmentMode: "BRAZIL_STOCK",
+          marginPercent: 18,
+          reliabilityScore: 0.9,
+          isPrimary: false,
+        }),
+      ],
+      { privateLabelRequired: false, preferBrazilStockWhenCompetitive: true },
+    );
+    expect(result.recommended?.supplierOfferId).toBe("offer-brasil");
+  });
+
+  it("não força estoque Brasil economicamente ruim", () => {
+    const result = new SupplierRouter().route(
+      [
+        candidate({
+          quoteId: "import",
+          deliveredSupplierCostBrl: "30.00",
+          isPrimary: false,
+        }),
+        candidate({
+          quoteId: "brasil",
+          supplierOfferId: "offer-brasil",
+          deliveredSupplierCostBrl: "55.00",
+          estimatedMinimumDays: 2,
+          estimatedMaximumDays: 4,
+          fulfillmentMode: "BRAZIL_STOCK",
+          isPrimary: false,
+        }),
+      ],
+      { privateLabelRequired: false, preferBrazilStockWhenCompetitive: true },
+    );
+    expect(result.recommended?.quoteId).toBe("import");
+  });
 });

@@ -6,6 +6,7 @@ import type {
 } from "@medusajs/framework/http";
 import { Modules, ProductStatus } from "@medusajs/framework/utils";
 import { PublicCatalogService } from "../catalog/service";
+import { publicRateLimit } from "./public-rate-limit";
 
 export async function blockImportedProductPublication(
   request: MedusaRequest,
@@ -58,6 +59,26 @@ export default defineMiddlewares({
     {
       matcher: "/admin/achilles*",
       middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    {
+      matcher: "/achilles/store/checkout*",
+      middlewares: [publicRateLimit],
+    },
+    {
+      matcher: "/achilles/store/payment-intents*",
+      middlewares: [publicRateLimit],
+    },
+    {
+      matcher: "/achilles/store/shipping*",
+      middlewares: [publicRateLimit],
+    },
+    {
+      matcher: "/achilles/store/orders*",
+      middlewares: [publicRateLimit],
+    },
+    {
+      matcher: "/webhooks/mercado-pago",
+      middlewares: [publicRateLimit],
     },
   ],
 });

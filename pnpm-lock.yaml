@@ -26,6 +26,9 @@ importers:
       '@achilles/alibaba-connector':
         specifier: workspace:*
         version: link:../../integrations/alibaba
+      '@achilles/cj-connector':
+        specifier: workspace:*
+        version: link:../../integrations/cj
       '@achilles/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -158,6 +161,31 @@ importers:
       '@types/node':
         specifier: 24.10.13
         version: 24.10.13
+      eslint:
+        specifier: 9.39.2
+        version: 9.39.2(jiti@1.21.7)(supports-color@8.1.1)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 8.56.1
+        version: 8.56.1(eslint@9.39.2(jiti@1.21.7)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.10.13)(vite@7.3.6(@types/node@24.10.13)(jiti@1.21.7)(yaml@2.9.0))
+
+  integrations/cj:
+    dependencies:
+      '@achilles/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@achilles/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+    devDependencies:
+      '@eslint/js':
+        specifier: 9.39.2
+        version: 9.39.2
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@1.21.7)(supports-color@8.1.1)

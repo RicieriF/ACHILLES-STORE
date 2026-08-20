@@ -1,7 +1,7 @@
 export type Supplier = {
   id: string;
   name: string;
-  provider: "ALIBABA" | "CJ" | "OTHER" | "MANUAL";
+  provider: "ALIBABA" | "CJ" | "BRAZIL_STOCK" | "OTHER" | "MANUAL";
   status: "ACTIVE" | "INACTIVE";
   country_code: string;
   contact_name?: string | null;
@@ -25,6 +25,7 @@ export type SupplierOffer = {
   unit_cost_max?: string | null;
   moq: number;
   availability: "UNKNOWN" | "IN_STOCK" | "OUT_OF_STOCK";
+  availability_quantity?: number | null;
   branding_moq?: number | null;
   branding_lead_time_days?: number | null;
   notes?: string | null;
