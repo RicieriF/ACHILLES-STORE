@@ -1246,6 +1246,66 @@ h3 {
   color: var(--muted);
 }
 
+.shipping-calculator {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.shipping-calculator > div:first-child p {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.shipping-calculator__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+.shipping-calculator__form .button {
+  min-height: 3rem;
+}
+.shipping-methods {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.shipping-methods legend {
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.shipping-method {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.shipping-method:has(input:checked) {
+  border-color: var(--olive);
+  box-shadow: 0 0 0 1px var(--olive);
+}
+.shipping-method span {
+  display: grid;
+  gap: 0.2rem;
+}
+.shipping-method small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.shipping-calculator--compact {
+  margin-top: 0;
+  padding: var(--space-4) 0;
+}
+
 @media (max-width: 1024px) {
   .desktop-nav {
     gap: 0.9rem;

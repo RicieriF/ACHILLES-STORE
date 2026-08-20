@@ -21,6 +21,11 @@ const featureFlagSchema = z.object({
   ALIBABA_ORDER_CREATE: disabledByDefault,
   ALIBABA_ORDER_PAY: disabledByDefault,
   ALIBABA_TRACKING: disabledByDefault,
+  CJ_PRODUCT_LOOKUP: disabledByDefault,
+  CJ_SHIPPING_QUOTE: disabledByDefault,
+  CJ_ORDER_CREATE: disabledByDefault,
+  CJ_ORDER_PAY: disabledByDefault,
+  CJ_TRACKING: disabledByDefault,
 });
 
 export type FeatureFlags = z.output<typeof featureFlagSchema>;

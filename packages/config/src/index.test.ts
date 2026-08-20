@@ -13,13 +13,18 @@ describe("workspace environment", () => {
 });
 
 describe("feature flags", () => {
-  it("defaults every Alibaba capability to disabled", () => {
+  it("defaults every Alibaba and CJ capability to disabled", () => {
     expect(parseFeatureFlags({})).toEqual({
       ALIBABA_PRODUCT_IMPORT: false,
       ALIBABA_FREIGHT_QUOTE: false,
       ALIBABA_ORDER_CREATE: false,
       ALIBABA_ORDER_PAY: false,
       ALIBABA_TRACKING: false,
+      CJ_PRODUCT_LOOKUP: false,
+      CJ_SHIPPING_QUOTE: false,
+      CJ_ORDER_CREATE: false,
+      CJ_ORDER_PAY: false,
+      CJ_TRACKING: false,
     });
   });
   it("rejects ambiguous boolean values", () => {

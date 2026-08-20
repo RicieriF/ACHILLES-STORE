@@ -19,6 +19,16 @@ test("public journey reaches a real Medusa cart", async ({ page }) => {
   await expect(
     page.getByRole("group", { name: "Escolha uma variante" }),
   ).toBeVisible();
+  await page.getByRole("textbox", { name: "CEP" }).fill("01310-100");
+  await page.getByRole("button", { name: "CALCULAR" }).click();
+  const shipping = page.getByRole("group", { name: "Opções de entrega" });
+  await expect(
+    shipping.getByRole("radio", { name: /Entrega Econômica/ }),
+  ).toBeChecked();
+  await shipping.getByRole("radio", { name: /Entrega Expressa/ }).check();
+  await expect(
+    shipping.getByRole("radio", { name: /Entrega Expressa/ }),
+  ).toBeChecked();
   await page.getByRole("button", { name: "Adicionar à mochila" }).click();
 
   const cart = page.getByRole("dialog", { name: "Sua mochila" });
@@ -38,6 +48,42 @@ test("public journey reaches a real Medusa cart", async ({ page }) => {
     .getByRole("button", { name: "Remover" })
     .click();
   await expect(page.getByText("Sua mochila está vazia.")).toBeVisible();
+});
+
+test("public shipping API validates input and sanitizes sourcing data", async ({
+  request,
+}) => {
+  const catalog = await request.get(
+    "http://localhost:9000/achilles/store/catalog",
+  );
+  const payload = (await catalog.json()) as {
+    products: Array<{ variants: Array<{ id: string }> }>;
+  };
+  const variantId = payload.products[0]?.variants[0]?.id;
+  expect(variantId).toBeTruthy();
+  const response = await request.post(
+    "http://localhost:9000/achilles/store/shipping/quote",
+    { data: { variantId, quantity: 1, postalCode: "01310-100" } },
+  );
+  expect(response.status()).toBe(200);
+  const body = await response.text();
+  expect(body).toContain("Entrega Econômica");
+  expect(body).not.toMatch(
+    /Alibaba|SupplierOffer|supplierOfferId|supplierUnitCost|providerReference|source_url/,
+  );
+
+  const rejected = await request.post(
+    "http://localhost:9000/achilles/store/shipping/quote",
+    {
+      data: {
+        variantId,
+        quantity: 1,
+        postalCode: "01310-100",
+        supplierOfferId: "supoff_private",
+      },
+    },
+  );
+  expect(rejected.status()).toBe(400);
 });
 
 test("search returns public content without sourcing data", async ({

@@ -2,6 +2,7 @@ import type {
   PublicCartDTO,
   PublicCatalogDTO,
   PublicProductDTO,
+  PublicShippingQuoteDTO,
 } from "@achilles/domain";
 
 const commerceUrl = (
@@ -66,6 +67,29 @@ export async function commerceCartRequest(
   return payload.cart;
 }
 
+export async function commerceShippingRequest(
+  body: unknown,
+): Promise<PublicShippingQuoteDTO> {
+  const response = await fetch(`${commerceUrl}/achilles/store/shipping/quote`, {
+    method: "POST",
+    cache: "no-store",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(8_000),
+  });
+  const payload: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message =
+      isObject(payload) && typeof payload.message === "string"
+        ? payload.message
+        : "Não foi possível calcular a entrega";
+    throw new StorefrontDataError(message);
+  }
+  if (!isObject(payload) || !isPublicShippingQuote(payload.quote))
+    throw new StorefrontDataError("Resposta pública de frete inválida");
+  return payload.quote;
+}
+
 async function commerceFetch<T>(path: string): Promise<T> {
   const response = await fetch(`${commerceUrl}${path}`, {
     cache: "no-store",
@@ -107,6 +131,27 @@ function isPublicCart(value: unknown): value is PublicCartDTO {
     typeof value.itemCount === "number" &&
     isObject(value.subtotal) &&
     typeof value.subtotal.formatted === "string"
+  );
+}
+
+function isPublicShippingQuote(
+  value: unknown,
+): value is PublicShippingQuoteDTO {
+  return (
+    isObject(value) &&
+    typeof value.destinationPostalCode === "string" &&
+    ["SINGLE", "MULTI_SHIPMENT"].includes(String(value.shipmentType)) &&
+    Array.isArray(value.methods) &&
+    value.methods.every(
+      (method) =>
+        isObject(method) &&
+        typeof method.id === "string" &&
+        typeof method.name === "string" &&
+        isObject(method.price) &&
+        typeof method.price.formatted === "string" &&
+        typeof method.estimatedMinimumDays === "number" &&
+        typeof method.estimatedMaximumDays === "number",
+    )
   );
 }
 

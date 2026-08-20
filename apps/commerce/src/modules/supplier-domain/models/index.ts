@@ -8,3 +8,5 @@ export { default as ImportDraft } from "./import-draft";
 export { default as ImportAttempt } from "./import-attempt";
 export { default as CostQuote } from "./cost-quote";
 export { default as PricingSnapshot } from "./pricing-snapshot";
+export { default as ShippingQuote } from "./shipping-quote";
+export { default as SupplierRoutingDecision } from "./supplier-routing-decision";

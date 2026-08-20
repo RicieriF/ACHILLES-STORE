@@ -387,10 +387,95 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
         });
     }
 
-    const [primaryOffer] = await supplierDomain.listSupplierOffers({
+    const productOffers = await supplierDomain.listSupplierOffers({
       product_id: mainProduct.id,
-      is_primary: true,
     });
+    const primaryOffer = productOffers.find((offer) => offer.is_primary);
+    const alternateOffer = productOffers.find((offer) => !offer.is_primary);
+    const primaryShippingFixture = {
+      source: "TASK_009_DEVELOPMENT_FIXTURE",
+      shipping_methods: [
+        {
+          service_code: "MANUAL_ECONOMY",
+          method_name: "Entrega Econômica",
+          currency: "USD",
+          amount: "31.00",
+          estimated_min_days: 15,
+          estimated_max_days: 25,
+          tracking_supported: true,
+          duties_mode: "UNKNOWN",
+          warnings: [
+            "Cotação fictícia exclusiva do ambiente de desenvolvimento",
+          ],
+          assumptions: [
+            "Tabela manual fictícia, sem chamada ao Alibaba ou outro provider",
+          ],
+          ttl_seconds: 300,
+        },
+        {
+          service_code: "MANUAL_EXPRESS",
+          method_name: "Entrega Expressa",
+          currency: "USD",
+          amount: "45.00",
+          estimated_min_days: 7,
+          estimated_max_days: 12,
+          tracking_supported: true,
+          duties_mode: "DDP",
+          warnings: [
+            "Cotação fictícia exclusiva do ambiente de desenvolvimento",
+          ],
+          assumptions: [
+            "DDP declarado explicitamente pela fixture manual; não representa operação real",
+          ],
+          ttl_seconds: 300,
+        },
+      ],
+    };
+    const alternateShippingFixture = {
+      source: "TASK_009_DEVELOPMENT_FIXTURE",
+      shipping_methods: [
+        {
+          service_code: "MANUAL_ALT_ECONOMY",
+          method_name: "Entrega Econômica Alternativa",
+          currency: "USD",
+          amount: "14.00",
+          estimated_min_days: 18,
+          estimated_max_days: 28,
+          tracking_supported: true,
+          duties_mode: "DAP",
+          warnings: ["Fornecedor sem private label"],
+          assumptions: [
+            "Tabela manual fictícia, sem chamada a provider externo",
+          ],
+          ttl_seconds: 300,
+        },
+      ],
+    };
+    if (primaryOffer)
+      await supplierDomain.updateSupplierOffers({
+        id: primaryOffer.id,
+        freight_metadata: primaryShippingFixture,
+      });
+    if (alternateOffer)
+      await supplierDomain.updateSupplierOffers({
+        id: alternateOffer.id,
+        freight_metadata: alternateShippingFixture,
+      });
+    for (const offer of productOffers) {
+      const maps = await supplierDomain.listSupplierVariantMaps({
+        supplier_offer_id: offer.id,
+      });
+      for (const variant of productWithVariants.variants) {
+        if (!maps.some((map) => map.store_variant_id === variant.id))
+          await supplierDomain.createSupplierVariantMaps({
+            supplier_offer_id: offer.id,
+            store_variant_id: variant.id,
+            supplier_sku: `${offer.supplier_product_id}-${variant.id}`,
+            supplier_variant_id: null,
+            attributes: { source: "TASK_009_DEVELOPMENT_FIXTURE" },
+          });
+      }
+    }
     if (primaryOffer) {
       const [existingQuote] = await supplierDomain.listCostQuotes({
         supplier_offer_id: primaryOffer.id,
@@ -407,6 +492,9 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
           approved_retail_price: "149.00",
           approved_at: approvedAt,
           approved_by: "development-seed",
+          fx_rate: "5.00",
+          fx_source: "TASK_009_DEVELOPMENT_FIXTURE",
+          fx_captured_at: approvedAt,
           assumptions: {
             items: ["Fixture comercial local; não utilizar em produção"],
           },
@@ -437,7 +525,34 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
           id: quote.id,
           approved_snapshot_id: snapshot.id,
         });
+      } else {
+        await supplierDomain.updateCostQuotes({
+          id: existingQuote.id,
+          fx_rate: "5.00",
+          fx_source: "TASK_009_DEVELOPMENT_FIXTURE",
+          fx_captured_at: new Date(),
+        });
       }
+    }
+    if (alternateOffer) {
+      const [alternateQuote] = await supplierDomain.listCostQuotes({
+        supplier_offer_id: alternateOffer.id,
+      });
+      if (!alternateQuote)
+        await supplierDomain.createCostQuotes({
+          supplier_offer_id: alternateOffer.id,
+          status: "INCOMPLETE",
+          source_currency: "USD",
+          supplier_unit_cost: alternateOffer.unit_cost,
+          moq: alternateOffer.moq,
+          fx_rate: "5.00",
+          fx_source: "TASK_009_DEVELOPMENT_FIXTURE",
+          fx_captured_at: new Date(),
+          assumptions: {
+            items: ["FX fictício exclusivo do simulador logístico local"],
+          },
+          warnings: { items: [] },
+        });
     }
   }
 

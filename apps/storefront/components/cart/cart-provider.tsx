@@ -15,6 +15,7 @@ import {
 import { Drawer } from "../ui/interactive";
 import { IconButton } from "../ui/primitives";
 import { MinusIcon, PlusIcon } from "../ui/icons";
+import { ShippingCalculator } from "../store/shipping-calculator";
 
 const storageKey = "achilles_cart_id";
 
@@ -220,6 +221,11 @@ function CartContents({ value }: { value: CartContextValue }) {
           {error}
         </p>
       )}
+      <ShippingCalculator
+        key={`${cart.id}:${String(cart.itemCount)}:${String(cart.subtotal.amount)}`}
+        cartId={cart.id}
+        compact
+      />
       <div className="cart-summary">
         <span>Subtotal</span>
         <strong>{cart.subtotal.formatted}</strong>

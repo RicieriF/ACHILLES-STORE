@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useCart } from "../cart/cart-provider";
 import { QuantitySelector } from "../ui/interactive";
 import { Button, Price } from "../ui/primitives";
+import { ShippingCalculator } from "./shipping-calculator";
 
 export function PurchasePanel({ variants }: { variants: PublicVariantDTO[] }) {
   const [selectedId, setSelectedId] = useState(variants[0]?.id ?? "");
@@ -72,6 +73,13 @@ export function PurchasePanel({ variants }: { variants: PublicVariantDTO[] }) {
         <p className="commercial-note" role="status" aria-live="polite">
           {message}
         </p>
+      )}
+      {selected && (
+        <ShippingCalculator
+          key={`${selected.id}:${String(quantity)}`}
+          variantId={selected.id}
+          quantity={quantity}
+        />
       )}
     </div>
   );

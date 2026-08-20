@@ -3,6 +3,7 @@ import BrandingProfile from "./branding-profile";
 import Supplier from "./supplier";
 import SupplierVariantMap from "./supplier-variant-map";
 import CostQuote from "./cost-quote";
+import ShippingQuote from "./shipping-quote";
 
 const SupplierOffer = model
   .define("supplier_offer", {
@@ -43,6 +44,9 @@ const SupplierOffer = model
       mappedBy: "supplier_offer",
     }),
     cost_quotes: model.hasMany(() => CostQuote, { mappedBy: "supplier_offer" }),
+    shipping_quotes: model.hasMany(() => ShippingQuote, {
+      mappedBy: "supplier_offer",
+    }),
   })
   .indexes([
     { on: ["product_id"] },

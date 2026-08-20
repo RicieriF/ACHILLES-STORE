@@ -1,7 +1,7 @@
 export type Supplier = {
   id: string;
   name: string;
-  provider: "ALIBABA" | "OTHER" | "MANUAL";
+  provider: "ALIBABA" | "CJ" | "OTHER" | "MANUAL";
   status: "ACTIVE" | "INACTIVE";
   country_code: string;
   contact_name?: string | null;
