@@ -26,6 +26,10 @@ const featureFlagSchema = z.object({
   CJ_ORDER_CREATE: disabledByDefault,
   CJ_ORDER_PAY: disabledByDefault,
   CJ_TRACKING: disabledByDefault,
+  MERCADO_PAGO_ENABLED: disabledByDefault,
+  MERCADO_PAGO_PIX: disabledByDefault,
+  MERCADO_PAGO_CARD: disabledByDefault,
+  MERCADO_PAGO_BOLETO: disabledByDefault,
 });
 
 export type FeatureFlags = z.output<typeof featureFlagSchema>;

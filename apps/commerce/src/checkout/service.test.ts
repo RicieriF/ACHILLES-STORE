@@ -17,6 +17,7 @@ describe("snapshots públicos do checkout", () => {
     expect(totals.products.amount).toBe(298);
     expect(totals.shipping.amount).toBe(40);
     expect(totals.discounts.amount).toBe(0);
+    expect(totals.fulfillmentTaxMode).toBe("UNKNOWN");
     expect(totals.taxes).toEqual({
       known: false,
       amount: null,
@@ -63,6 +64,18 @@ describe("snapshots públicos do checkout", () => {
     expect(make("DDP")).toContain("incluídos");
     expect(make("DAP")).toContain("podem ser cobrados");
     expect(make("UNKNOWN")).toContain("não foram determinados");
+  });
+
+  it("trata DDP como confirmado sem inventar imposto separado", () => {
+    const totals = calculateCheckoutTotals(cart(), [
+      { ...selection("group-1", 25), dutiesMode: "DDP" },
+    ]);
+    expect(totals.fulfillmentTaxMode).toBe("DDP_CONFIRMED");
+    expect(totals.taxes).toEqual({
+      known: true,
+      amount: null,
+      label: "Incluídos na entrega DDP",
+    });
   });
 });
 

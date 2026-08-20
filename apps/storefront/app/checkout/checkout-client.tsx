@@ -590,8 +590,9 @@ function Review({
         </div>
       </section>
       <Alert tone="info">
-        Tributos ainda não determinados não são apresentados como R$ 0. O valor
-        atual inclui produtos e fretes selecionados.
+        {checkout.totals?.taxes.known
+          ? `${checkout.totals.taxes.label}. Nenhum imposto adicional foi inventado.`
+          : "Tributos ainda não determinados não são apresentados como R$ 0. O pagamento permanece bloqueado."}
       </Alert>
       <Button
         type="button"
@@ -615,13 +616,10 @@ function Ready({ checkout }: { checkout: PublicCheckoutDTO }) {
       <h2 id="checkout-step-heading" tabIndex={-1}>
         Checkout pronto
       </h2>
-      <p>
-        Pagamento será habilitado na próxima etapa. Pix, cartão e eventual
-        boleto serão adicionados sem assumir um único meio de pagamento.
-      </p>
+      <p>Escolha Pix ou cartão no ambiente de pagamento configurado.</p>
       <code>{checkout.id}</code>
-      <Link className="button button--secondary" href="/">
-        Voltar à loja
+      <Link className="button" href="/checkout/pagamento">
+        Ir para pagamento
       </Link>
     </div>
   );
@@ -656,7 +654,9 @@ function OrderSummary({ checkout }: { checkout: PublicCheckoutDTO }) {
         <p>
           <span>Tributos conhecidos</span>
           <strong>
-            {totals?.taxes.amount?.formatted ?? "Não determinado"}
+            {totals?.taxes.amount?.formatted ??
+              totals?.taxes.label ??
+              "Não determinado"}
           </strong>
         </p>
         <p className="summary-total">

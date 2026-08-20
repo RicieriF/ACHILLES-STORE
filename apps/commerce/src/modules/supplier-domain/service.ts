@@ -14,6 +14,9 @@ import {
   SupplierRoutingDecision,
   CheckoutSession,
   CheckoutShippingSelection,
+  TaxpayerIdentity,
+  PaymentIntent,
+  PaymentProviderEvent,
 } from "./models";
 
 class SupplierDomainModuleService extends MedusaService({
@@ -31,6 +34,9 @@ class SupplierDomainModuleService extends MedusaService({
   SupplierRoutingDecision,
   CheckoutSession,
   CheckoutShippingSelection,
+  TaxpayerIdentity,
+  PaymentIntent,
+  PaymentProviderEvent,
 }) {}
 
 export default SupplierDomainModuleService;
