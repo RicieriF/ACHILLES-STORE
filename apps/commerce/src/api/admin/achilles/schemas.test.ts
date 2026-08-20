@@ -3,6 +3,7 @@ import {
   brandingProfileInput,
   paginationInput,
   productPolicyInput,
+  pricingAssumptionsInput,
   supplierInput,
   supplierOfferInput,
 } from "./schemas";
@@ -87,6 +88,51 @@ describe("admin supplier validation", () => {
       offset: 5,
     });
     expect(() => paginationInput.parse({ limit: 101 })).toThrow();
+  });
+});
+
+describe("admin pricing validation", () => {
+  const pricing = {
+    fxRate: "5.42",
+    fxSource: "Manual Admin",
+    fxTimestamp: "2026-08-20T12:00:00.000Z",
+    internationalShipping: "28.00",
+    internationalShippingAllocationMethod: "PER_UNIT" as const,
+    shippingAllocationQuantity: 1,
+    customsTaxEstimate: "42.50",
+    customsStrategy: "MANUAL_QUOTE" as const,
+    brandingUnitCost: "3.00",
+    brandingSetupCost: "20.00",
+    brandingSetupAllocationQuantity: 10,
+    paymentGatewayPercent: "5.00",
+    paymentGatewayFixed: "1.00",
+    paymentGatewayProvider: "Premissa manual",
+    localDeliveryCost: "12.00",
+    returnsRiskReservePercent: "2.00",
+    returnsRiskReserveFixed: "1.00",
+    operationalReservePercent: "3.00",
+    operationalReserveFixed: "2.00",
+    targetMarginPercent: "30.00",
+    promotionalBufferPercent: "5.00",
+    assumptions: ["Estimativa manual"],
+  };
+
+  it("aceita premissas completas e estratégias tributárias explícitas", () => {
+    expect(pricingAssumptionsInput.parse(pricing).customsStrategy).toBe(
+      "MANUAL_QUOTE",
+    );
+  });
+
+  it("rejeita FX ausente, estratégia tributária ausente e valores negativos", () => {
+    expect(() =>
+      pricingAssumptionsInput.parse({ ...pricing, fxRate: undefined }),
+    ).toThrow();
+    expect(() =>
+      pricingAssumptionsInput.parse({ ...pricing, customsStrategy: undefined }),
+    ).toThrow();
+    expect(() =>
+      pricingAssumptionsInput.parse({ ...pricing, localDeliveryCost: "-1" }),
+    ).toThrow();
   });
 });
 

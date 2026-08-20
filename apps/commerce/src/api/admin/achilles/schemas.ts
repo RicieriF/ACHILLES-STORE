@@ -135,7 +135,47 @@ export const paginationInput = z.object({
   supplier_id: z.string().trim().max(200).optional(),
 });
 
+const pricingDecimal = z
+  .string()
+  .regex(/^\d+(\.\d{1,8})?$/, "Use decimal positivo com ponto");
+export const pricingAssumptionsInput = z.object({
+  fxRate: pricingDecimal.refine(
+    (value) => value !== "0",
+    "FX deve ser maior que zero",
+  ),
+  fxSource: z.string().trim().min(2).max(120),
+  fxTimestamp: z.iso.datetime(),
+  internationalShipping: pricingDecimal,
+  internationalShippingAllocationMethod: z.enum([
+    "PER_UNIT",
+    "BY_QUANTITY",
+    "MANUAL",
+  ]),
+  shippingAllocationQuantity: z.number().int().positive(),
+  customsTaxEstimate: pricingDecimal,
+  customsStrategy: z.enum([
+    "CUSTOMER_AS_IMPORTER",
+    "MERCHANT_AS_IMPORTER",
+    "MANUAL_QUOTE",
+  ]),
+  brandingUnitCost: pricingDecimal,
+  brandingSetupCost: pricingDecimal,
+  brandingSetupAllocationQuantity: z.number().int().positive(),
+  paymentGatewayPercent: pricingDecimal,
+  paymentGatewayFixed: pricingDecimal,
+  paymentGatewayProvider: z.string().trim().min(2).max(120),
+  localDeliveryCost: pricingDecimal,
+  returnsRiskReservePercent: pricingDecimal,
+  returnsRiskReserveFixed: pricingDecimal,
+  operationalReservePercent: pricingDecimal,
+  operationalReserveFixed: pricingDecimal,
+  targetMarginPercent: pricingDecimal,
+  promotionalBufferPercent: pricingDecimal,
+  assumptions: z.array(z.string().trim().min(1).max(500)).max(30),
+});
+
 export type SupplierInput = z.infer<typeof supplierInput>;
 export type SupplierOfferInput = z.infer<typeof supplierOfferInput>;
 export type BrandingProfileInput = z.infer<typeof brandingProfileInput>;
 export type ProductPolicyInput = z.infer<typeof productPolicyInput>;
+export type PricingAssumptionsInput = z.infer<typeof pricingAssumptionsInput>;

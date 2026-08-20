@@ -58,6 +58,29 @@ Endpoints: `POST/GET /admin/achilles/imports`, `GET/PATCH
 /admin/achilles/imports/:id` e ações `reprocess`, `approve`, `reject` e
 `convert`.
 
+### Pricing Engine
+
+O motor opera exclusivamente sobre `CostQuote` e usa aritmética decimal baseada
+em `BigInt`; dinheiro não é calculado com floating point JavaScript. O fluxo é:
+
+`INCOMPLETE → premissas manuais → READY_FOR_PRICING → PRICED → aprovação humana`
+
+Cada cálculo cria um `PricingSnapshot` versionado com inputs, outputs, FX,
+estratégia tributária, premissas, warnings, versão do motor, horário e ator.
+Alterar uma premissa ou SupplierOffer relevante marca o quote como `STALE` sem
+apagar snapshots ou o preço anteriormente aprovado.
+
+Fórmula v1: `landed cost` soma fornecedor convertido, frete internacional
+unitário, tributo estimado, branding rateado e entrega local; break-even e preço
+sugerido resolvem algebricamente gateway, reservas, buffer promocional e margem.
+Tributos são estimativas, nunca garantia fiscal. FX é manual e congelado no
+snapshot. Frete aceita `PER_UNIT`, `BY_QUANTITY` e `MANUAL`.
+
+Rotas autenticadas: `GET/POST /admin/achilles/pricing/:id`, ações `calculate` e
+`approve`, e `GET /admin/achilles/pricing/:id/history`. Calcular ≠ aprovar;
+aprovar ≠ publicar. O Product continua `DRAFT`, sem sales channel e sem preço
+aplicado automaticamente ao catálogo.
+
 ## Quality gates
 
 ```text
@@ -76,8 +99,8 @@ Testes persistentes exigem PostgreSQL. A CI inicia PostgreSQL 17, executa `pnpm 
 ## Segurança e limitações
 
 Todas as flags Alibaba permanecem `false` por padrão. Não existem pedido ou
-pagamento de fornecedor, Mercado Pago, checkout brasileiro completo, Pricing
-Engine ou regras fiscais inventadas. A coleta opcional não contorna CAPTCHA,
+pagamento de fornecedor, Mercado Pago, checkout brasileiro completo, provider
+FX pago ou regras fiscais universais inventadas. A coleta opcional não contorna CAPTCHA,
 login, rate limit ou proteção anti-bot. O seed não configura logística de checkout.
 
 Fake Redis, Local Event Bus e locking em memória são aceitáveis somente no

@@ -90,7 +90,33 @@ inativa e private label permanece não confirmado.
 `commercial_readiness` é separado do readiness técnico: `PRICING_REQUIRED` para
 triagem limpa e `COMPLIANCE_REQUIRED` para lâminas. Item `BLOCKED` não converte.
 Uma proteção de API impede mudar Product importado para `published` nesta etapa.
-O próximo passo é Pricing Engine; não existe cálculo BRL automático.
+O cálculo BRL somente existe após premissas explícitas no Pricing Engine.
+
+## Pricing Engine e snapshots
+
+O módulo `pricing` recebe somente premissas administrativas validadas. Ele não
+chama Alibaba, gateway ou provider FX externo.
+
+```text
+SupplierOffer → CostQuote (estado atual) → PricingSnapshot v1, v2, ...
+                                               └── aprovação humana/ator
+```
+
+`PricingSnapshot` preserva inputs, outputs, FX, estratégia tributária, versão do
+motor, premissas, warnings e ator. Recalcular adiciona uma versão e nunca apaga
+a anterior. O preço aprovado aponta para o snapshot aprovado; premissas novas
+marcam o estado atual como `STALE` sem sobrescrever essa decisão.
+
+As fronteiras são `FxRateProvider` (`MANUAL` implementado, externo futuro),
+`ImportTaxStrategy` (`CUSTOMER_AS_IMPORTER`, `MERCHANT_AS_IMPORTER` e
+`MANUAL_QUOTE`) e os rateios de frete `PER_UNIT`, `BY_QUANTITY` e `MANUAL`.
+Tributação e frete são estimativas explícitas. A aritmética usa strings decimais,
+`BigInt`, divisão e arredondamento half-up explícito.
+
+Após aprovação, compliance `CLEAR` avança `commercial_readiness` para
+`READY_FOR_REVIEW`; revisão pendente continua `COMPLIANCE_REQUIRED` e bloqueio
+continua `BLOCKED`. Nenhuma operação de pricing altera Product status, sales
+channel ou prices do Medusa.
 
 ## Limites
 

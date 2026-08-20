@@ -11,6 +11,7 @@ import {
   type AdminRequest,
 } from "../../http";
 import { supplierOfferInput } from "../../schemas";
+import { markOfferPricingStale } from "../../../../../pricing/service";
 
 export async function GET(
   request: AdminRequest,
@@ -75,6 +76,14 @@ export async function POST(
     before: safeSnapshot(existing),
     after: safeSnapshot(offer),
   });
+  if (
+    input.unit_cost !== undefined ||
+    input.currency !== undefined ||
+    input.moq !== undefined ||
+    input.freight_metadata !== undefined ||
+    input.branding_profile_id !== undefined
+  )
+    await markOfferPricingStale(service, offer.id, actorId(request));
   response.json({ offer });
 }
 

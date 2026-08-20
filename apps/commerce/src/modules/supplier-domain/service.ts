@@ -9,6 +9,7 @@ import {
   ImportDraft,
   ImportAttempt,
   CostQuote,
+  PricingSnapshot,
 } from "./models";
 
 class SupplierDomainModuleService extends MedusaService({
@@ -21,6 +22,7 @@ class SupplierDomainModuleService extends MedusaService({
   ImportDraft,
   ImportAttempt,
   CostQuote,
+  PricingSnapshot,
 }) {}
 
 export default SupplierDomainModuleService;

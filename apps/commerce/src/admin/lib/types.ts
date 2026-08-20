@@ -43,6 +43,51 @@ export type CostQuote = {
   supplier_unit_cost: string;
   supplier_unit_cost_max?: string | null;
   moq: number;
+  fx_rate?: string | null;
+  fx_source?: string | null;
+  fx_captured_at?: string | null;
+  international_freight?: string | null;
+  international_shipping_allocation_method?:
+    "PER_UNIT" | "BY_QUANTITY" | "MANUAL" | null;
+  shipping_allocation_quantity?: number | null;
+  customs_tax?: string | null;
+  customs_strategy?:
+    "CUSTOMER_AS_IMPORTER" | "MERCHANT_AS_IMPORTER" | "MANUAL_QUOTE" | null;
+  branding_cost?: string | null;
+  branding_setup_cost?: string | null;
+  branding_setup_allocation?: number | null;
+  payment_fee?: string | null;
+  payment_gateway_percent?: string | null;
+  payment_gateway_provider?: string | null;
+  local_delivery?: string | null;
+  risk_reserve?: string | null;
+  returns_risk_reserve_percent?: string | null;
+  operational_reserve?: string | null;
+  operational_reserve_percent?: string | null;
+  target_margin?: string | null;
+  promotional_buffer?: string | null;
+  landed_cost?: string | null;
+  break_even_price?: string | null;
+  suggested_retail_price?: string | null;
+  gross_margin_percent?: string | null;
+  contribution_margin?: string | null;
+  approved_retail_price?: string | null;
+  approved_at?: string | null;
+  assumptions?: { items: string[] };
+  warnings?: { items: string[] };
+};
+
+export type PricingSnapshot = {
+  id: string;
+  version: number;
+  engine_version: string;
+  inputs: Record<string, unknown>;
+  outputs: Record<string, string | string[]>;
+  calculated_at: string;
+  calculated_by?: string | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  approved_retail_price?: string | null;
 };
 
 export type BrandingProfile = {
