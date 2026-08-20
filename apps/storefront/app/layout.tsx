@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import "./styles.css";
 import { SiteHeader } from "../components/layout/site-header";
 import { SiteFooter } from "../components/layout/site-footer";
+import { CartProvider } from "../components/cart/cart-provider";
+import { getPublicCatalog } from "../lib/commerce";
 
 export const metadata: Metadata = {
   title: {
@@ -11,7 +13,9 @@ export const metadata: Metadata = {
   },
   description:
     "Equipamentos outdoor selecionados para camping, iluminação e jornadas reais.",
-  metadataBase: new URL("https://achilles.example.invalid"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://achilles.example.invalid",
+  ),
   openGraph: {
     title: "Achilles Store",
     description: "Equipamentos para ir mais longe.",
@@ -20,17 +24,22 @@ export const metadata: Metadata = {
     images: ["/images/og-placeholder.svg"],
   },
   icons: { icon: "/favicon.svg" },
+  robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  const catalog = await getPublicCatalog().catch(() => null);
+  const categories = catalog?.categories ?? [];
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-scroll-behavior="smooth">
       <body>
-        <SiteHeader />
-        {children}
-        <SiteFooter />
+        <CartProvider>
+          <SiteHeader categories={categories} />
+          {children}
+          <SiteFooter categories={categories} />
+        </CartProvider>
       </body>
     </html>
   );

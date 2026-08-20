@@ -131,21 +131,26 @@ export const SectionHeading = ({
   title,
   description,
   action,
+  level = 2,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
   action?: ReactNode;
-}) => (
-  <div className="section-heading">
-    <div>
-      {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-      <h2>{title}</h2>
-      {description && <p>{description}</p>}
+  level?: 1 | 2;
+}) => {
+  const Heading = level === 1 ? "h1" : "h2";
+  return (
+    <div className="section-heading">
+      <div>
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <Heading>{title}</Heading>
+        {description && <p>{description}</p>}
+      </div>
+      {action}
     </div>
-    {action}
-  </div>
-);
+  );
+};
 export const Price = ({
   value,
   previous,
@@ -154,17 +159,20 @@ export const Price = ({
   value: string | null;
   previous?: string | undefined;
   unavailable?: boolean;
-}) => (
-  <div
-    className="price"
-    aria-label={
-      unavailable || !value ? "Preço não disponível" : `Preço ${value} reais`
-    }
-  >
-    {previous && <s>R$ {previous}</s>}
-    <strong>{unavailable || !value ? "Preço em breve" : `R$ ${value}`}</strong>
-  </div>
-);
+}) => {
+  const displayValue = value?.startsWith("R$") ? value : `R$ ${value ?? ""}`;
+  return (
+    <div
+      className="price"
+      aria-label={
+        unavailable || !value ? "Preço não disponível" : `Preço ${displayValue}`
+      }
+    >
+      {previous && <s>R$ {previous}</s>}
+      <strong>{unavailable || !value ? "Preço em breve" : displayValue}</strong>
+    </div>
+  );
+};
 export const Rating = () => (
   <div className="rating" aria-label="Avaliações ainda não disponíveis">
     <span aria-hidden="true">☆☆☆☆☆</span>

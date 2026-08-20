@@ -1,0 +1,115 @@
+import type {
+  PublicCartDTO,
+  PublicCatalogDTO,
+  PublicProductDTO,
+} from "@achilles/domain";
+
+const commerceUrl = (
+  process.env.NEXT_PUBLIC_COMMERCE_URL ?? "http://localhost:9000"
+).replace(/\/$/, "");
+
+export class StorefrontDataError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StorefrontDataError";
+  }
+}
+
+export async function getPublicCatalog(input?: {
+  query?: string;
+  category?: string;
+}): Promise<PublicCatalogDTO> {
+  const parameters = new URLSearchParams();
+  if (input?.query) parameters.set("q", input.query);
+  if (input?.category) parameters.set("category", input.category);
+  return commerceFetch<PublicCatalogDTO>(
+    `/achilles/store/catalog${parameters.size ? `?${parameters}` : ""}`,
+  );
+}
+
+export async function getPublicProduct(
+  handle: string,
+): Promise<PublicProductDTO | null> {
+  const response = await fetch(
+    `${commerceUrl}/achilles/store/products/${encodeURIComponent(handle)}`,
+    { cache: "no-store", signal: AbortSignal.timeout(8_000) },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok)
+    throw new StorefrontDataError("Não foi possível carregar o produto");
+  const payload: unknown = await response.json();
+  if (!isObject(payload) || !isPublicProduct(payload.product))
+    throw new StorefrontDataError("Resposta pública de produto inválida");
+  return payload.product;
+}
+
+export async function commerceCartRequest(
+  path: string,
+  init: RequestInit,
+): Promise<PublicCartDTO> {
+  const response = await fetch(`${commerceUrl}${path}`, {
+    ...init,
+    cache: "no-store",
+    headers: { "content-type": "application/json", ...init.headers },
+    signal: AbortSignal.timeout(8_000),
+  });
+  const payload: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message =
+      isObject(payload) && typeof payload.message === "string"
+        ? payload.message
+        : "Não foi possível atualizar o carrinho";
+    throw new StorefrontDataError(message);
+  }
+  if (!isObject(payload) || !isPublicCart(payload.cart))
+    throw new StorefrontDataError("Resposta pública de carrinho inválida");
+  return payload.cart;
+}
+
+async function commerceFetch<T>(path: string): Promise<T> {
+  const response = await fetch(`${commerceUrl}${path}`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok)
+    throw new StorefrontDataError("Catálogo temporariamente indisponível");
+  const payload: unknown = await response.json();
+  if (
+    !isObject(payload) ||
+    !Array.isArray(payload.products) ||
+    !payload.products.every(isPublicProduct) ||
+    !Array.isArray(payload.categories)
+  )
+    throw new StorefrontDataError("Resposta pública de catálogo inválida");
+  return payload as T;
+}
+
+function isPublicProduct(value: unknown): value is PublicProductDTO {
+  return (
+    isObject(value) &&
+    typeof value.id === "string" &&
+    typeof value.slug === "string" &&
+    typeof value.title === "string" &&
+    typeof value.description === "string" &&
+    Array.isArray(value.categories) &&
+    Array.isArray(value.images) &&
+    Array.isArray(value.variants) &&
+    isObject(value.price) &&
+    typeof value.price.amount === "number"
+  );
+}
+
+function isPublicCart(value: unknown): value is PublicCartDTO {
+  return (
+    isObject(value) &&
+    typeof value.id === "string" &&
+    Array.isArray(value.items) &&
+    typeof value.itemCount === "number" &&
+    isObject(value.subtotal) &&
+    typeof value.subtotal.formatted === "string"
+  );
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}

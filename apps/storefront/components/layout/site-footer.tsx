@@ -1,3 +1,4 @@
+import type { PublicCategoryDTO } from "@achilles/domain";
 import Link from "next/link";
 import { Container } from "../ui/primitives";
 
@@ -7,9 +8,12 @@ const groups = [
     ["Fale conosco", "Dúvidas frequentes", "Trocas e devoluções"],
   ],
   ["Institucional", ["Sobre a Achilles", "Curadoria", "Contato"]],
-  ["Categorias", ["Lanternas", "Camping", "Outdoor essencial"]],
 ] as const;
-export const SiteFooter = () => (
+export const SiteFooter = ({
+  categories,
+}: {
+  categories: PublicCategoryDTO[];
+}) => (
   <footer className="site-footer">
     <Container>
       <div className="footer-lead">
@@ -34,6 +38,18 @@ export const SiteFooter = () => (
             ))}
           </div>
         ))}
+        <div>
+          <strong>Categorias</strong>
+          {categories.length === 0 ? (
+            <span>Curadoria em preparação</span>
+          ) : (
+            categories.slice(0, 5).map((category) => (
+              <Link key={category.id} href={`/categoria/${category.handle}`}>
+                {category.title}
+              </Link>
+            ))
+          )}
+        </div>
         <div>
           <strong>Redes sociais</strong>
           <a href="#footer">Instagram — em breve</a>

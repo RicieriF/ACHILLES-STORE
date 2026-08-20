@@ -5,6 +5,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http";
 import { Modules, ProductStatus } from "@medusajs/framework/utils";
+import { PublicCatalogService } from "../catalog/service";
 
 export async function blockImportedProductPublication(
   request: MedusaRequest,
@@ -28,12 +29,21 @@ export async function blockImportedProductPublication(
   }>(Modules.PRODUCT);
   const product = await products.retrieveProduct(id);
   if (product.metadata?.achilles_import_draft_id) {
-    response.status(409).json({
-      code: "IMPORTED_PRODUCT_PUBLICATION_BLOCKED",
-      message:
-        "Produto importado permanece DRAFT até Pricing Engine, compliance final e publicação humana futura",
-    });
-    return;
+    const decision = await new PublicCatalogService(request.scope)
+      .canPublishProduct(id)
+      .catch(() => ({
+        eligible: false as const,
+        reasons: ["PUBLICATION_GATE_UNAVAILABLE"],
+      }));
+    if (!decision.eligible) {
+      response.status(409).json({
+        code: "IMPORTED_PRODUCT_PUBLICATION_BLOCKED",
+        message:
+          "Produto importado não atende todos os gates de publicação pública",
+        reasons: decision.reasons,
+      });
+      return;
+    }
   }
   next();
 }

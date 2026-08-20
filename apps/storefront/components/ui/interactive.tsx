@@ -6,28 +6,45 @@ import { CloseIcon, MinusIcon, PlusIcon, SearchIcon } from "./icons";
 
 export const SearchInput = ({
   placeholder = "Buscar equipamentos",
+  defaultValue,
 }: {
   placeholder?: string;
+  defaultValue?: string;
 }) => (
   <label className="search-input">
     <span className="sr-only">Buscar</span>
     <SearchIcon />
-    <input type="search" placeholder={placeholder} />
+    <input
+      type="search"
+      name="q"
+      defaultValue={defaultValue}
+      placeholder={placeholder}
+      maxLength={100}
+    />
   </label>
 );
 export const QuantitySelector = ({
   disabled = false,
+  value,
+  onChange,
 }: {
   disabled?: boolean;
+  value?: number;
+  onChange?: (value: number) => void;
 }) => {
-  const [quantity, setQuantity] = useState(1);
+  const [internalQuantity, setInternalQuantity] = useState(1);
+  const quantity = value ?? internalQuantity;
+  const update = (next: number) => {
+    if (onChange) onChange(next);
+    else setInternalQuantity(next);
+  };
   return (
     <div className="quantity" aria-label="Quantidade">
       <IconButton
         label="Diminuir quantidade"
         disabled={disabled || quantity === 1}
         onClick={() => {
-          setQuantity((value) => Math.max(1, value - 1));
+          update(Math.max(1, quantity - 1));
         }}
       >
         <MinusIcon />
@@ -37,7 +54,7 @@ export const QuantitySelector = ({
         label="Aumentar quantidade"
         disabled={disabled}
         onClick={() => {
-          setQuantity((value) => value + 1);
+          update(quantity + 1);
         }}
       >
         <PlusIcon />
@@ -101,11 +118,13 @@ export const Drawer = ({
   open,
   onClose,
   title,
+  closeLabel = "Fechar menu",
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  closeLabel?: string;
   children: ReactNode;
 }) => {
   useEffect(() => {
@@ -134,7 +153,7 @@ export const Drawer = ({
       >
         <div className="drawer__head">
           <strong>{title}</strong>
-          <IconButton label="Fechar menu" onClick={onClose}>
+          <IconButton label={closeLabel} onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </div>

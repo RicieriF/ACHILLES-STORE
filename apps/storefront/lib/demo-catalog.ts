@@ -66,3 +66,44 @@ export const demoCategories = [
     href: "#destaques",
   },
 ];
+
+export const designSystemProduct: PublicProductDTO = {
+  id: "design-system-product",
+  slug: demoProducts[0]!.slug,
+  title: demoProducts[0]!.title,
+  description: demoProducts[0]!.description,
+  shortDescription: demoProducts[0]!.description,
+  categories: [
+    {
+      id: "design-system-category",
+      handle: "lanternas",
+      title: demoProducts[0]!.category,
+      description: null,
+      productCount: 1,
+      image: null,
+    },
+  ],
+  images: [
+    {
+      id: "design-system-image",
+      url: demoProducts[0]!.image,
+      alt: demoProducts[0]!.title,
+    },
+  ],
+  variants: [
+    {
+      id: "design-system-variant",
+      title: "Padrão",
+      options: [{ name: "Modelo", value: "Padrão" }],
+      available: true,
+      price: { amount: 289.9, currencyCode: "brl", formatted: "R$ 289,90" },
+    },
+  ],
+  price: { amount: 289.9, currencyCode: "brl", formatted: "R$ 289,90" },
+  available: true,
+  featured: true,
+  newArrival: false,
+  createdAt: "2026-08-20T00:00:00.000Z",
+  updatedAt: "2026-08-20T00:00:00.000Z",
+};
+import type { PublicProductDTO } from "@achilles/domain";

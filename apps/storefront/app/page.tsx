@@ -5,12 +5,30 @@ import { ProductCard } from "../components/store/product-card";
 import { ArrowIcon } from "../components/ui/icons";
 import {
   Container,
+  EmptyState,
+  ErrorState,
   SectionHeading,
   TrustItem,
 } from "../components/ui/primitives";
-import { demoCategories, demoProducts } from "../lib/demo-catalog";
+import {
+  homeCategoryLimit,
+  homeCategoryMinimum,
+  homeFeaturedLimit,
+} from "../lib/catalog-config";
+import { getPublicCatalog } from "../lib/commerce";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const catalog = await getPublicCatalog().catch(() => null);
+  const products = catalog?.products ?? [];
+  const categories = (catalog?.categories ?? [])
+    .filter((category) => category.productCount >= homeCategoryMinimum)
+    .slice(0, homeCategoryLimit);
+  const highlights = [...products]
+    .sort((left, right) => Number(right.featured) - Number(left.featured))
+    .slice(0, homeFeaturedLimit);
+  const newest = products.find((product) => product.newArrival) ?? products[0];
+  const firstCategory = categories[0];
+
   return (
     <main id="conteudo">
       <section className="hero">
@@ -36,9 +54,14 @@ export default function HomePage() {
             <Link href="#destaques" className="button button--primary">
               Explorar equipamentos <ArrowIcon />
             </Link>
-            <Link href="#categorias" className="button button--glass">
-              Ver lanternas
-            </Link>
+            {firstCategory && (
+              <Link
+                href={`/categoria/${firstCategory.handle}`}
+                className="button button--glass"
+              >
+                Ver {firstCategory.title}
+              </Link>
+            )}
           </div>
         </Container>
         <div className="hero__index" aria-hidden="true">
@@ -47,39 +70,65 @@ export default function HomePage() {
           <small>EXPLORE WITH PURPOSE</small>
         </div>
       </section>
-      <section className="section" id="categorias">
-        <Container>
-          <SectionHeading
-            eyebrow="Comece por aqui"
-            title="Essenciais para o lado de fora."
-            description="Poucas categorias, bem selecionadas. A estrutura cresce junto com o catálogo."
-          />
-          <div className="category-grid">
-            {demoCategories.map((category) => (
-              <CategoryCard key={category.title} {...category} />
-            ))}
-          </div>
-        </Container>
-      </section>
+
+      {categories.length > 0 && (
+        <section className="section" id="categorias">
+          <Container>
+            <SectionHeading
+              eyebrow="Comece por aqui"
+              title="Essenciais para o lado de fora."
+              description="Poucas categorias, bem selecionadas. A estrutura cresce junto com o catálogo."
+            />
+            <div className="category-grid">
+              {categories.map((category) => (
+                <CategoryCard
+                  key={category.id}
+                  title={category.title}
+                  subtitle={`${category.productCount} ${category.productCount === 1 ? "produto" : "produtos"}`}
+                  image={
+                    category.image?.url ?? "/images/category-placeholder.svg"
+                  }
+                  href={`/categoria/${category.handle}`}
+                />
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
+
       <section className="section section--tint" id="destaques">
         <Container>
           <SectionHeading
             eyebrow="Seleção Achilles"
             title="Escolhas que fazem sentido."
-            description="Demonstração visual com produtos fictícios isolados do catálogo comercial."
+            description="Somente produtos internos liberados por compliance, pricing e canal comercial."
             action={
-              <Link href="#novidades" className="text-link">
-                Ver novidades <ArrowIcon />
-              </Link>
+              newest ? (
+                <Link href="#novidades" className="text-link">
+                  Ver novidades <ArrowIcon />
+                </Link>
+              ) : undefined
             }
           />
-          <div className="product-grid">
-            {demoProducts.map((product) => (
-              <ProductCard key={product.slug} product={product} />
-            ))}
-          </div>
+          {!catalog ? (
+            <ErrorState>
+              O catálogo não respondeu. Tente novamente em alguns instantes.
+            </ErrorState>
+          ) : highlights.length === 0 ? (
+            <EmptyState title="Curadoria em preparação">
+              Os primeiros equipamentos aparecerão aqui assim que concluírem a
+              revisão comercial.
+            </EmptyState>
+          ) : (
+            <div className="product-grid">
+              {highlights.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </Container>
       </section>
+
       <section className="editorial">
         <Container className="editorial__grid">
           <div className="editorial__media">
@@ -107,46 +156,50 @@ export default function HomePage() {
           </div>
         </Container>
       </section>
-      <section className="section" id="novidades">
-        <Container>
-          <SectionHeading
-            eyebrow="Recém-chegados"
-            title="Novos caminhos começam pequenos."
-          />
-          <div className="new-arrival">
-            <div>
-              <span className="new-arrival__number">01</span>
-              <p className="eyebrow">Iluminação</p>
-              <h3>Uma base visual pronta para receber o catálogo aprovado.</h3>
-              <p>
-                Nesta etapa, os itens são demonstrações locais. Produtos reais
-                só entram quando status, compliance, pricing e canal estiverem
-                liberados.
-              </p>
-            </div>
-            <Image
-              src="/images/product-light.svg"
-              alt="Lanterna demonstrativa em composição gráfica"
-              width={620}
-              height={620}
+
+      {newest && (
+        <section className="section" id="novidades">
+          <Container>
+            <SectionHeading
+              eyebrow="Recém-chegados"
+              title="Novos caminhos começam pequenos."
             />
-          </div>
-        </Container>
-      </section>
+            <div className="new-arrival">
+              <div>
+                <span className="new-arrival__number">01</span>
+                <p className="eyebrow">
+                  {newest.categories[0]?.title ?? "Novidade"}
+                </p>
+                <h3>{newest.title}</h3>
+                <p>{newest.shortDescription}</p>
+                <Link href={`/produto/${newest.slug}`} className="text-link">
+                  Conhecer produto <ArrowIcon />
+                </Link>
+              </div>
+              <Image
+                src={newest.images[0]?.url ?? "/images/product-placeholder.svg"}
+                alt={newest.title}
+                width={620}
+                height={620}
+              />
+            </div>
+          </Container>
+        </section>
+      )}
+
       <section className="trust" id="principios">
         <Container className="trust__grid">
-          <TrustItem icon="01" title="Pagamento seguro">
-            Estrutura visual preparada; meios de pagamento ainda não estão
-            ativos.
+          <TrustItem icon="01" title="Carrinho protegido">
+            Quantidades e preços são validados pelo commerce core.
           </TrustItem>
           <TrustItem icon="02" title="Produtos selecionados">
-            Catálogo interno, curado e sujeito aos gates comerciais.
+            Somente itens aprovados pelos gates comerciais ficam públicos.
           </TrustItem>
-          <TrustItem icon="03" title="Rastreamento">
-            Experiência prevista para uma etapa futura da plataforma.
+          <TrustItem icon="03" title="Entrega transparente">
+            Prazo será calculado na próxima etapa, sem promessa fictícia.
           </TrustItem>
-          <TrustItem icon="04" title="Suporte no Brasil">
-            Canal em português previsto para a operação comercial.
+          <TrustItem icon="04" title="Atendimento em português">
+            Experiência preparada para a operação brasileira.
           </TrustItem>
         </Container>
       </section>

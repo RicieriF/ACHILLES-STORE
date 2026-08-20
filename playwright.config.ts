@@ -7,10 +7,19 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: "html",
   use: { baseURL: "http://localhost:3000", trace: "on-first-retry" },
-  webServer: {
-    command: "pnpm --filter @achilles/storefront start",
-    url: "http://localhost:3000/api/health",
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: "pnpm --filter @achilles/commerce start",
+      url: "http://localhost:9000/ready",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      command: "pnpm --filter @achilles/storefront start",
+      url: "http://localhost:3000/api/health",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

@@ -1,22 +1,30 @@
 "use client";
 
+import type { PublicCategoryDTO } from "@achilles/domain";
 import Link from "next/link";
 import { useState } from "react";
+import { useCart } from "../cart/cart-provider";
 import { CartIcon, MenuIcon, SearchIcon, UserIcon } from "../ui/icons";
 import { Drawer, SearchInput } from "../ui/interactive";
 import { IconButton } from "../ui/primitives";
 
-const links = [
-  ["Início", "/"],
-  ["Lanternas", "/#destaques"],
-  ["Camping", "/#categorias"],
-  ["Outdoor", "/#categorias"],
-  ["Novidades", "/#novidades"],
-] as const;
-
-export const SiteHeader = () => {
+export const SiteHeader = ({
+  categories,
+}: {
+  categories: PublicCategoryDTO[];
+}) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const { cart, openCart } = useCart();
+  const links = [
+    { label: "Início", href: "/" },
+    ...categories.slice(0, 4).map((category) => ({
+      label: category.title,
+      href: `/categoria/${category.handle}`,
+    })),
+    { label: "Novidades", href: "/#novidades" },
+  ];
+
   return (
     <>
       <a className="skip-link" href="#conteudo">
@@ -46,9 +54,9 @@ export const SiteHeader = () => {
             <small>STORE</small>
           </Link>
           <nav className="desktop-nav" aria-label="Navegação principal">
-            {links.map(([label, href]) => (
-              <Link key={label} href={href}>
-                {label}
+            {links.map((link) => (
+              <Link key={link.href} href={link.href}>
+                {link.label}
               </Link>
             ))}
           </nav>
@@ -68,16 +76,21 @@ export const SiteHeader = () => {
             >
               <UserIcon />
             </IconButton>
-            <IconButton label="Carrinho — em breve" disabled>
+            <IconButton label="Abrir carrinho" onClick={openCart}>
               <CartIcon />
-              <span className="cart-count">0</span>
+              <span className="cart-count">{cart?.itemCount ?? 0}</span>
             </IconButton>
           </div>
         </div>
         {searchOpen && (
-          <div className="container header-search">
+          <form
+            className="container header-search"
+            action="/buscar"
+            method="get"
+            role="search"
+          >
             <SearchInput />
-          </div>
+          </form>
         )}
       </header>
       <Drawer
@@ -88,24 +101,28 @@ export const SiteHeader = () => {
         title="Menu"
       >
         <nav className="mobile-nav" aria-label="Navegação mobile">
-          {links.map(([label, href]) => (
+          {links.map((link) => (
             <Link
-              key={label}
-              href={href}
+              key={link.href}
+              href={link.href}
               onClick={() => {
                 setMenuOpen(false);
               }}
             >
-              {label}
+              {link.label}
             </Link>
           ))}
         </nav>
-        <div className="drawer-search">
+        <form
+          action="/buscar"
+          method="get"
+          role="search"
+          className="drawer-search"
+        >
           <SearchInput />
-        </div>
+        </form>
         <p className="drawer-note">
-          Categorias futuras aparecem quando houver produtos públicos
-          suficientes.
+          Categorias aparecem automaticamente quando possuem produtos públicos.
         </p>
       </Drawer>
     </>

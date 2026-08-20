@@ -1,110 +1,97 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Breadcrumb } from "../../../components/store/breadcrumb";
-import {
-  Accordion,
-  QuantitySelector,
-  Tabs,
-} from "../../../components/ui/interactive";
-import {
-  Badge,
-  Button,
-  Container,
-  Price,
-  Rating,
-} from "../../../components/ui/primitives";
-import { demoProducts } from "../../../lib/demo-catalog";
+import { ProductGallery } from "../../../components/store/product-gallery";
+import { PurchasePanel } from "../../../components/store/purchase-panel";
+import { Accordion, Tabs } from "../../../components/ui/interactive";
+import { Badge, Container } from "../../../components/ui/primitives";
+import { getPublicProduct } from "../../../lib/commerce";
 
-export const dynamicParams = false;
-export const generateStaticParams = () =>
-  demoProducts.map(({ slug }) => ({ slug }));
+type ProductPageProps = { params: Promise<{ slug: string }> };
+
 export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
-  const product = demoProducts.find((item) => item.slug === slug);
+}: ProductPageProps): Promise<Metadata> {
+  const { slug: rawSlug } = await params;
+  const slug = decodeSegment(rawSlug);
+  const product = await getPublicProduct(slug).catch(() => null);
+  if (!product) notFound();
   return {
-    title: product?.title ?? "Produto",
-    description: product?.description,
+    title: product.title,
+    description: product.shortDescription,
+    alternates: { canonical: `/produto/${product.slug}` },
+    openGraph: {
+      type: "website",
+      title: product.title,
+      description: product.shortDescription,
+      images: product.images[0]
+        ? [{ url: product.images[0].url, alt: product.images[0].alt }]
+        : [{ url: "/images/og-placeholder.svg", alt: "Achilles Store" }],
+    },
   };
 }
 
-export default async function ProductPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const product = demoProducts.find((item) => item.slug === slug);
+export default async function ProductPage({ params }: ProductPageProps) {
+  const { slug: rawSlug } = await params;
+  const slug = decodeSegment(rawSlug);
+  const product = await getPublicProduct(slug);
   if (!product) notFound();
-  const purchasable = product.available && product.price !== null;
+  const category = product.categories[0];
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    description: product.shortDescription,
+    image: product.images.map((image) => image.url),
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "BRL",
+      price: product.price.amount,
+      availability: product.available
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      url: `/produto/${product.slug}`,
+    },
+  };
+
   return (
     <main id="conteudo" className="product-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replaceAll("<", "\\u003c"),
+        }}
+      />
       <Container>
         <Breadcrumb
           items={[
             { label: "Início", href: "/" },
-            { label: product.category, href: "/#categorias" },
+            ...(category
+              ? [
+                  {
+                    label: category.title,
+                    href: `/categoria/${category.handle}`,
+                  },
+                ]
+              : []),
             { label: product.title },
           ]}
         />
         <div className="product-detail">
-          <section className="product-gallery" aria-label="Galeria do produto">
-            <div className="product-gallery__main">
-              <Image
-                src={product.image}
-                alt={`${product.title} — imagem demonstrativa`}
-                fill
-                priority
-                sizes="(max-width: 800px) 100vw, 56vw"
-              />
-            </div>
-            <div className="product-gallery__thumbs">
-              <button aria-label="Imagem 1 selecionada" aria-pressed="true">
-                <Image src={product.image} alt="" width={90} height={90} />
-              </button>
-              <button aria-label="Imagem alternativa — placeholder" disabled>
-                <span>Imagem futura</span>
-              </button>
-            </div>
-          </section>
+          <ProductGallery title={product.title} images={product.images} />
           <section className="product-info">
-            <p className="product-card__category">{product.category}</p>
+            <p className="product-card__category">
+              {category?.title ?? "Achilles Store"}
+            </p>
             <h1>{product.title}</h1>
-            <Rating />
-            <Price
-              value={product.price}
-              previous={product.previousPrice}
-              unavailable={!purchasable}
-            />
-            <p className="product-info__description">{product.description}</p>
-            {product.badge && <Badge>{product.badge}</Badge>}
-            <fieldset className="variant-field">
-              <legend>Acabamento</legend>
-              <button
-                className="variant-option is-selected"
-                aria-pressed="true"
-              >
-                Grafite
-              </button>
-              <button className="variant-option" disabled>
-                Oliva — em breve
-              </button>
-            </fieldset>
-            <div className="purchase-row">
-              <QuantitySelector disabled={!purchasable} />
-              <Button disabled={!purchasable}>
-                {purchasable
-                  ? "Adicionar ao carrinho — demonstração"
-                  : "Indisponível"}
-              </Button>
-            </div>
+            <p className="product-info__description">
+              {product.shortDescription}
+            </p>
+            {product.featured && <Badge>Destaque</Badge>}
+            <PurchasePanel variants={product.variants} />
             <p className="commercial-note">
-              Demonstração visual: carrinho e checkout serão implementados em
-              tarefa futura.
+              Prazo de entrega calculado na próxima etapa. Nenhum prazo estimado
+              é prometido antes da configuração logística.
             </p>
             <Accordion
               items={[
@@ -112,8 +99,8 @@ export default async function ProductPage({
                   title: "Entrega",
                   content: (
                     <p>
-                      Prazo e modalidade serão exibidos somente quando
-                      configurados no backend.
+                      Origem, modalidade e prazo serão apresentados quando
+                      calculados para o endereço informado.
                     </p>
                   ),
                 },
@@ -128,31 +115,17 @@ export default async function ProductPage({
         <section className="product-specs">
           <Tabs
             items={[
-              {
-                label: "Descrição",
-                content: (
-                  <p>
-                    {product.description} Conteúdo provisório para validar
-                    hierarquia e leitura.
-                  </p>
-                ),
-              },
+              { label: "Descrição", content: <p>{product.description}</p> },
               {
                 label: "Especificações",
                 content: (
                   <dl>
-                    <div>
-                      <dt>Material</dt>
-                      <dd>A confirmar</dd>
-                    </div>
-                    <div>
-                      <dt>Dimensões</dt>
-                      <dd>A confirmar</dd>
-                    </div>
-                    <div>
-                      <dt>Origem de dados</dt>
-                      <dd>Fixture local da TASK 007</dd>
-                    </div>
+                    {product.variants[0]?.options.map((option) => (
+                      <div key={option.name}>
+                        <dt>{option.name}</dt>
+                        <dd>{option.value}</dd>
+                      </div>
+                    ))}
                   </dl>
                 ),
               },
@@ -162,4 +135,12 @@ export default async function ProductPage({
       </Container>
     </main>
   );
+}
+
+function decodeSegment(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }

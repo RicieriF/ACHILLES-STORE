@@ -21,11 +21,11 @@ import {
   Select,
   Skeleton,
 } from "../../components/ui/primitives";
-import { demoProducts } from "../../lib/demo-catalog";
+import { designSystemProduct } from "../../lib/demo-catalog";
 
 export default function DesignSystemPage() {
   if (process.env.NODE_ENV === "production") notFound();
-  const previewProduct = demoProducts[0];
+  const previewProduct = designSystemProduct;
   if (!previewProduct) notFound();
   return (
     <main id="conteudo" className="ds-page">

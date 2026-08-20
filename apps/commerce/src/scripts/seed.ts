@@ -10,6 +10,7 @@ import {
   createRegionsWorkflow,
   createSalesChannelsWorkflow,
   createShippingProfilesWorkflow,
+  updateProductVariantsWorkflow,
   updateStoresStep,
   updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows";
@@ -206,7 +207,7 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
               {
                 title: "Padrão",
                 sku: product.sku,
-                manage_inventory: true,
+                manage_inventory: false,
                 options: { Modelo: "Padrão" },
                 prices: [
                   {
@@ -276,7 +277,9 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
       lead_time_days: 12,
     }));
 
-  const mainProduct = seededProducts[0];
+  const mainProduct = seededProducts.find(
+    (product) => product.handle === developmentProducts[0].handle,
+  );
   if (mainProduct) {
     const existingOffers = await supplierDomain.listSupplierOffers({
       product_id: mainProduct.id,
@@ -287,7 +290,7 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
           supplier_id: supplier.id,
           branding_profile_id: branding.id,
           product_id: mainProduct.id,
-          supplier_product_id: "DEV-PRIMARY-001",
+          supplier_product_id: "DEV-LANTERNA-PRIMARY-001",
           source_url: "https://example.invalid/dev-primary-001",
           currency: "USD",
           unit_cost: "8.50",
@@ -305,7 +308,7 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
         {
           supplier_id: alternate.id,
           product_id: mainProduct.id,
-          supplier_product_id: "DEV-ALT-001",
+          supplier_product_id: "DEV-LANTERNA-ALT-001",
           source_url: "https://example.invalid/dev-alternate-001",
           currency: "USD",
           unit_cost: "9.10",
@@ -322,21 +325,119 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     }
   }
 
-  for (const [index, product] of seededProducts.entries()) {
+  for (const product of seededProducts) {
+    const publicDevelopmentProduct =
+      product.handle === developmentProducts[0].handle;
     const existingPolicy = await supplierDomain.listProductPolicies({
       product_id: product.id,
     });
-    if (existingPolicy.length === 0) {
+    const currentPolicy = existingPolicy[0];
+    if (!currentPolicy) {
       await supplierDomain.createProductPolicies({
         product_id: product.id,
         fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
-        compliance_status: index === 1 ? "REVIEW_REQUIRED" : "PENDING",
+        compliance_status: publicDevelopmentProduct
+          ? "CLEAR"
+          : "REVIEW_REQUIRED",
         sensitivity: "ORDINARY",
-        compliance_notes:
-          index === 1
-            ? "Exemplo fictício encaminhado para revisão administrativa."
-            : "Avaliação inicial pendente.",
+        commercial_readiness: publicDevelopmentProduct
+          ? "READY_FOR_REVIEW"
+          : "COMPLIANCE_REQUIRED",
+        compliance_notes: publicDevelopmentProduct
+          ? "Produto fictício liberado somente no ambiente de desenvolvimento."
+          : "Exemplo fictício encaminhado para revisão administrativa.",
+        reviewed_by: publicDevelopmentProduct ? "development-seed" : null,
+        reviewed_at: publicDevelopmentProduct ? new Date() : null,
       });
+    } else if (publicDevelopmentProduct) {
+      await supplierDomain.updateProductPolicies({
+        id: currentPolicy.id,
+        compliance_status: "CLEAR",
+        commercial_readiness: "READY_FOR_REVIEW",
+        reviewed_by: "development-seed",
+        reviewed_at: new Date(),
+        compliance_notes:
+          "Produto fictício liberado somente no ambiente de desenvolvimento.",
+      });
+    } else {
+      await supplierDomain.updateProductPolicies({
+        id: currentPolicy.id,
+        compliance_status: "REVIEW_REQUIRED",
+        commercial_readiness: "COMPLIANCE_REQUIRED",
+        reviewed_by: null,
+        reviewed_at: null,
+        compliance_notes:
+          "Exemplo fictício encaminhado para revisão administrativa.",
+      });
+    }
+  }
+
+  if (mainProduct) {
+    const productWithVariants = await productService.retrieveProduct(
+      mainProduct.id,
+      { relations: ["variants"] },
+    );
+    for (const variant of productWithVariants.variants) {
+      if (variant.manage_inventory)
+        await updateProductVariantsWorkflow(container).run({
+          input: {
+            selector: { id: variant.id, product_id: mainProduct.id },
+            update: { manage_inventory: false },
+          },
+        });
+    }
+
+    const [primaryOffer] = await supplierDomain.listSupplierOffers({
+      product_id: mainProduct.id,
+      is_primary: true,
+    });
+    if (primaryOffer) {
+      const [existingQuote] = await supplierDomain.listCostQuotes({
+        supplier_offer_id: primaryOffer.id,
+      });
+      if (!existingQuote) {
+        const approvedAt = new Date();
+        const quote = await supplierDomain.createCostQuotes({
+          supplier_offer_id: primaryOffer.id,
+          status: "PRICED",
+          source_currency: "USD",
+          supplier_unit_cost: "8.50",
+          moq: 1,
+          suggested_retail_price: "149.00",
+          approved_retail_price: "149.00",
+          approved_at: approvedAt,
+          approved_by: "development-seed",
+          assumptions: {
+            items: ["Fixture comercial local; não utilizar em produção"],
+          },
+          warnings: { items: [] },
+          calculated_at: approvedAt,
+        });
+        const snapshot = await supplierDomain.createPricingSnapshots({
+          cost_quote_id: quote.id,
+          version: 1,
+          engine_version: "task-008-development-seed",
+          inputs: { source: "development-seed" },
+          outputs: { suggestedRetailPrice: "149.00" },
+          assumptions: {
+            items: ["Fixture comercial local; não utilizar em produção"],
+          },
+          warnings: { items: [] },
+          fx_rate: "1.00",
+          fx_source: "development-seed",
+          fx_timestamp: approvedAt,
+          customs_strategy: "MANUAL_QUOTE",
+          calculated_by: "development-seed",
+          calculated_at: approvedAt,
+          approved_by: "development-seed",
+          approved_at: approvedAt,
+          approved_retail_price: "149.00",
+        });
+        await supplierDomain.updateCostQuotes({
+          id: quote.id,
+          approved_snapshot_id: snapshot.id,
+        });
+      }
     }
   }
 

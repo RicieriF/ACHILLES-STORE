@@ -105,6 +105,9 @@ importers:
       '@achilles/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@achilles/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@next/env':
         specifier: 16.3.1
         version: 16.3.1
