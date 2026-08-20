@@ -12,3 +12,6 @@ export { default as ShippingQuote } from "./shipping-quote";
 export { default as SupplierRoutingDecision } from "./supplier-routing-decision";
 export { default as CheckoutSession } from "./checkout-session";
 export { default as CheckoutShippingSelection } from "./checkout-shipping-selection";
+export { default as TaxpayerIdentity } from "./taxpayer-identity";
+export { default as PaymentIntent } from "./payment-intent";
+export { default as PaymentProviderEvent } from "./payment-provider-event";

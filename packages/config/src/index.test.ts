@@ -13,7 +13,7 @@ describe("workspace environment", () => {
 });
 
 describe("feature flags", () => {
-  it("defaults every Alibaba and CJ capability to disabled", () => {
+  it("defaults every supplier and payment capability to disabled", () => {
     expect(parseFeatureFlags({})).toEqual({
       ALIBABA_PRODUCT_IMPORT: false,
       ALIBABA_FREIGHT_QUOTE: false,
@@ -25,6 +25,10 @@ describe("feature flags", () => {
       CJ_ORDER_CREATE: false,
       CJ_ORDER_PAY: false,
       CJ_TRACKING: false,
+      MERCADO_PAGO_ENABLED: false,
+      MERCADO_PAGO_PIX: false,
+      MERCADO_PAGO_CARD: false,
+      MERCADO_PAGO_BOLETO: false,
     });
   });
   it("rejects ambiguous boolean values", () => {

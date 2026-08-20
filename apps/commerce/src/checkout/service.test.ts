@@ -64,6 +64,18 @@ describe("snapshots públicos do checkout", () => {
     expect(make("DAP")).toContain("podem ser cobrados");
     expect(make("UNKNOWN")).toContain("não foram determinados");
   });
+
+  it("trata DDP como confirmado sem inventar imposto separado", () => {
+    const totals = calculateCheckoutTotals(cart(), [
+      { ...selection("group-1", 25), dutiesMode: "DDP" },
+    ]);
+    expect(totals.fulfillmentTaxMode).toBe("DDP_CONFIRMED");
+    expect(totals.taxes).toEqual({
+      known: true,
+      amount: null,
+      label: "Incluídos na entrega DDP",
+    });
+  });
 });
 
 function selection(

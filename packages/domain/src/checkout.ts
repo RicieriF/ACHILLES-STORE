@@ -1,5 +1,6 @@
 import type { PublicCartDTO, PublicMoneyDTO } from "./public-catalog.js";
 import type { DutiesMode, PublicShippingMethodDTO } from "./shipping.js";
+import type { FulfillmentTaxMode } from "./payment.js";
 
 export const checkoutStatuses = [
   "CART",
@@ -8,6 +9,9 @@ export const checkoutStatuses = [
   "SHIPPING",
   "REVIEW",
   "READY_FOR_PAYMENT",
+  "PAYMENT_PENDING",
+  "PAID",
+  "PAYMENT_FAILED",
   "EXPIRED_SHIPPING",
   "REQUOTE_REQUIRED",
   "BLOCKED",
@@ -69,6 +73,7 @@ export type CheckoutTotalsDTO = {
   shipping: PublicMoneyDTO;
   discounts: PublicMoneyDTO;
   taxes: CheckoutTaxesDTO;
+  fulfillmentTaxMode: FulfillmentTaxMode;
   total: PublicMoneyDTO;
   currencyCode: "brl";
   capturedAt: string;

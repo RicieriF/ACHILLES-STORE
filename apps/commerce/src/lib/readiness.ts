@@ -12,6 +12,9 @@ export const requiredCommerceTables = [
   "shipping_quote",
   "checkout_session",
   "checkout_shipping_selection",
+  "taxpayer_identity",
+  "payment_intent",
+  "payment_provider_event",
 ] as const;
 
 export interface DatabaseProbe {

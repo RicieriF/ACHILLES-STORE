@@ -502,7 +502,7 @@ export class CheckoutService {
       totalsCalculated: Boolean(session.totals_snapshot),
       blocked: session.status === "BLOCKED",
       taxesKnown: session.totals_snapshot?.taxes.known ?? false,
-      allowUnknownTaxes: true,
+      allowUnknownTaxes: false,
     });
     return {
       id: session.id,
@@ -730,6 +730,9 @@ export function calculateCheckoutTotals(
     (sum, item) => sum + item.price.amount,
     0,
   );
+  const ddpConfirmed =
+    selections.length > 0 &&
+    selections.every((item) => item.dutiesMode === "DDP");
   return {
     products: money(cart.subtotal.amount),
     shippingByGroup: selections.map((item) => ({
@@ -738,7 +741,10 @@ export function calculateCheckoutTotals(
     })),
     shipping: money(shippingAmount),
     discounts: money(0),
-    taxes: { known: false, amount: null, label: "Não determinado" },
+    taxes: ddpConfirmed
+      ? { known: true, amount: null, label: "Incluídos na entrega DDP" }
+      : { known: false, amount: null, label: "Não determinado" },
+    fulfillmentTaxMode: ddpConfirmed ? "DDP_CONFIRMED" : "UNKNOWN",
     total: money(cart.subtotal.amount + shippingAmount),
     currencyCode: "brl",
     capturedAt: new Date().toISOString(),
@@ -787,7 +793,12 @@ function noticeFor(status: CheckoutStatus): string | null {
   if (status === "REQUOTE_REQUIRED")
     return "As opções de entrega precisam ser atualizadas.";
   if (status === "READY_FOR_PAYMENT")
-    return "Pagamento será habilitado na próxima etapa.";
+    return "Checkout pronto para escolher o pagamento.";
+  if (status === "PAYMENT_PENDING")
+    return "Aguardando confirmação do pagamento.";
+  if (status === "PAID") return "Pagamento confirmado.";
+  if (status === "PAYMENT_FAILED")
+    return "Pagamento não aprovado. Você pode tentar novamente.";
   if (status === "BLOCKED")
     return "Revise os itens do carrinho para continuar.";
   return null;

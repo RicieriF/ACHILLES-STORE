@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 test("public journey reaches a real Medusa cart", async ({ page }) => {
@@ -164,10 +165,11 @@ test("sitemap contains only eligible public catalog URLs", async ({
   expect(body).not.toContain("design-system");
 });
 
-test("guest checkout brasileiro reaches READY_FOR_PAYMENT with recovery and requote", async ({
+test("guest checkout reaches Pix pending, signed webhook and paid confirmation", async ({
   page,
+  request,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await page.locator("article").first().getByRole("link").first().click();
@@ -229,12 +231,21 @@ test("guest checkout brasileiro reaches READY_FOR_PAYMENT with recovery and requ
     page.getByRole("heading", { name: "Revise seu pedido" }),
   ).toBeVisible();
   await page.locator("#checkout-step-heading").focus();
-  await page.getByRole("button", { name: /Frete/ }).click();
+  const progress = page.getByRole("navigation", {
+    name: "Progresso do checkout",
+  });
+  await progress.getByRole("button", { name: /Frete/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Escolha a entrega" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("radio", { name: /Entrega Econômica/ }),
   ).toBeChecked();
 
-  await page.getByRole("button", { name: /Entrega/ }).click();
+  await progress.getByRole("button", { name: /Entrega/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Endereço de entrega" }),
+  ).toBeVisible();
   await page.locator("#postal-code").fill("29216-090");
   await page.getByLabel("Rua / logradouro").fill("Avenida Oceânica");
   await page.getByLabel("Número").fill("42");
@@ -250,13 +261,15 @@ test("guest checkout brasileiro reaches READY_FOR_PAYMENT with recovery and requ
     page.getByRole("radio", { name: /Entrega Econômica/ }),
   ).toBeChecked();
   await page.getByRole("button", { name: "Revisar pedido" }).click();
-
   await expect(
-    page.getByRole("heading", { name: "Revise seu pedido" }),
+    page.getByRole("alert").filter({ hasText: "Revise os dados do checkout" }),
   ).toBeVisible();
   await expect(
     page.getByText("Não determinado", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("radio", { name: /Entrega Expressa/ }).click();
+  await page.getByRole("button", { name: "Revisar pedido" }).click();
+  await expect(page.getByText("Incluídos na entrega DDP")).toBeVisible();
   await page.screenshot({
     path: "artifacts/task-010/revisao-390.png",
     fullPage: true,
@@ -272,15 +285,135 @@ test("guest checkout brasileiro reaches READY_FOR_PAYMENT with recovery and requ
     page.getByRole("heading", { name: "Checkout pronto" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Pagamento será habilitado na próxima etapa.", {
-      exact: true,
-    }),
+    page.getByText(
+      "Escolha Pix ou cartão no ambiente de pagamento configurado.",
+    ),
   ).toBeVisible();
   await page.locator("#checkout-step-heading").focus();
   await page.screenshot({
     path: "artifacts/task-010/ready-for-payment.png",
     fullPage: true,
   });
+  await page.getByRole("link", { name: "Ir para pagamento" }).click();
+  await expect(page.getByRole("heading", { name: "Pagamento" })).toBeVisible();
+  await page.getByLabel("CPF").fill("529.982.247-25");
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/payment") &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Gerar Pix" }).click();
+  const paymentResponse = await responsePromise;
+  const paymentBody = (await paymentResponse.json()) as {
+    paymentIntent: { id: string; taxpayerIdentityMasked: string | null };
+  };
+  expect(JSON.stringify(paymentBody)).not.toContain("52998224725");
+  expect(paymentBody.paymentIntent.taxpayerIdentityMasked).toBe(
+    "***.***.***-25",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Aguardando pagamento" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("QR Pix de teste não pagável")).toBeVisible();
+
+  const eventId = `evt_${Date.now()}`;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const manifest = `id:${paymentBody.paymentIntent.id.toLowerCase()};request-id:${eventId};ts:${timestamp};`;
+  const signature = createHmac("sha256", "playwright_test_webhook_secret_only")
+    .update(manifest)
+    .digest("hex");
+  const invalidWebhook = await request.post(
+    "http://localhost:9000/webhooks/test-payment",
+    {
+      headers: { "x-signature": `ts=${timestamp},v1=${"0".repeat(64)}` },
+      data: {
+        paymentIntentId: paymentBody.paymentIntent.id,
+        status: "PAID",
+        eventId,
+      },
+    },
+  );
+  expect(invalidWebhook.status()).toBe(401);
+  const webhook = await request.post(
+    "http://localhost:9000/webhooks/test-payment",
+    {
+      headers: { "x-signature": `ts=${timestamp},v1=${signature}` },
+      data: {
+        paymentIntentId: paymentBody.paymentIntent.id,
+        status: "PAID",
+        eventId,
+      },
+    },
+  );
+  expect(webhook.status()).toBe(200);
+  const duplicateWebhook = await request.post(
+    "http://localhost:9000/webhooks/test-payment",
+    {
+      headers: { "x-signature": `ts=${timestamp},v1=${signature}` },
+      data: {
+        paymentIntentId: paymentBody.paymentIntent.id,
+        status: "PAID",
+        eventId,
+      },
+    },
+  );
+  expect(duplicateWebhook.status()).toBe(200);
+  await expect(
+    page.getByRole("heading", { name: "Pagamento confirmado" }),
+  ).toBeVisible({ timeout: 12_000 });
+  await expect(
+    page.getByText(/Nenhum pedido foi enviado ao fornecedor/),
+  ).toBeVisible();
+});
+
+test("card double submit is idempotent, decline preserves checkout and retry approves", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180_000);
+  await reachPaymentPage(page);
+  const checkoutId = await page.evaluate(() =>
+    localStorage.getItem("achilles_checkout_id"),
+  );
+  expect(checkoutId).toBeTruthy();
+  const attemptId = crypto.randomUUID();
+  const payload = {
+    checkoutId,
+    method: "CARD",
+    attemptId,
+    card: {
+      token: "tok_test_declined",
+      paymentMethodId: "master",
+      installments: 1,
+    },
+  };
+  const [first, second] = await Promise.all([
+    request.post("http://localhost:9000/achilles/store/payment-intents", {
+      data: payload,
+    }),
+    request.post("http://localhost:9000/achilles/store/payment-intents", {
+      data: payload,
+    }),
+  ]);
+  const firstBody = (await first.json()) as {
+    paymentIntent: { id: string; status: string };
+  };
+  const secondBody = (await second.json()) as {
+    paymentIntent: { id: string; status: string };
+  };
+  expect(firstBody.paymentIntent.id).toBe(secondBody.paymentIntent.id);
+  expect(firstBody.paymentIntent.status).toBe("FAILED");
+  expect(JSON.stringify(firstBody)).not.toContain("tok_test_declined");
+  await page.getByRole("tab", { name: "Cartão" }).click();
+  await page.getByLabel("Parcelas permitidas pelo fixture").selectOption("2");
+  await page.getByRole("button", { name: "Simular cartão recusado" }).click();
+  await expect(page.getByText(/Pagamento recusado/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Tentar novamente" }).click();
+  await page.getByRole("button", { name: "Aprovar cartão de teste" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Pagamento confirmado" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Cartão de teste|CARD/)).toBeVisible();
 });
 
 test("checkout create is idempotent for double submit and requires no auth", async ({
@@ -335,6 +468,32 @@ test("multi-shipment fixture is explicit and contains no supplier data", async (
     fullPage: true,
   });
 });
+
+async function reachPaymentPage(page: import("@playwright/test").Page) {
+  await page.goto("/");
+  await page.locator("article").first().getByRole("link").first().click();
+  await page.getByRole("button", { name: "Adicionar à mochila" }).click();
+  await page
+    .getByRole("dialog", { name: "Sua mochila" })
+    .getByRole("link", { name: "Ir para o checkout" })
+    .click();
+  await page.getByLabel("Nome completo").fill("Cliente Teste");
+  await page.getByLabel("E-mail").fill("cliente@example.com");
+  await page.getByLabel("Telefone brasileiro").fill("(27) 99999-9999");
+  await page.getByRole("button", { name: "Continuar para entrega" }).click();
+  await page.locator("#postal-code").fill("01310-100");
+  await page.getByLabel("Rua / logradouro").fill("Avenida Paulista");
+  await page.getByLabel("Número").fill("1000");
+  await page.getByLabel("Bairro").fill("Bela Vista");
+  await page.getByLabel("Cidade").fill("São Paulo");
+  await page.getByLabel("UF").selectOption("SP");
+  await page.getByRole("button", { name: "Salvar e calcular frete" }).click();
+  await page.getByRole("radio", { name: /Entrega Expressa/ }).click();
+  await page.getByRole("button", { name: "Revisar pedido" }).click();
+  await page.getByRole("button", { name: "Continuar para pagamento" }).click();
+  await page.getByRole("link", { name: "Ir para pagamento" }).click();
+  await expect(page.getByRole("heading", { name: "Pagamento" })).toBeVisible();
+}
 
 function multiShipmentFixture(expiresAt: string) {
   const money = (amount: number) => ({

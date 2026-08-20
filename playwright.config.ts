@@ -13,6 +13,11 @@ export default defineConfig({
       url: "http://localhost:9000/ready",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      env: {
+        ...process.env,
+        PAYMENT_TEST_PROVIDER_ENABLED: "true",
+        PAYMENT_TEST_WEBHOOK_SECRET: "playwright_test_webhook_secret_only",
+      },
     },
     {
       command: "pnpm --filter @achilles/storefront start",

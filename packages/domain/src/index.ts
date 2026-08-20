@@ -5,3 +5,4 @@ export * from "./tax.js";
 export * from "./public-catalog.js";
 export * from "./shipping.js";
 export * from "./checkout.js";
+export * from "./payment.js";
