@@ -1,0 +1,12 @@
+.medusa
+.next
+coverage
+dist
+node_modules
+playwright-report
+test-results
+pnpm-lock.yaml
+AGENTS.md
+PROJECT_SPEC.md
+TASK_001_BOOTSTRAP.md
+README_BOOTSTRAP.md

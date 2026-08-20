@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm test:integration
+      - run: pnpm build
+        env:
+          DATABASE_URL: postgres://achilles:ci_only@localhost:5432/achilles_store
+          STORE_CORS: http://localhost:3000
+          ADMIN_CORS: http://localhost:9000
+          AUTH_CORS: http://localhost:3000,http://localhost:9000
+          JWT_SECRET: ci_placeholder_only_minimum_24_chars
+          COOKIE_SECRET: ci_placeholder_only_minimum_24_chars
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

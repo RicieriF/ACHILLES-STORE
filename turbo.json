@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", ".medusa/**", "dist/**"],
+      "env": [
+        "DATABASE_URL",
+        "STORE_CORS",
+        "ADMIN_CORS",
+        "AUTH_CORS",
+        "JWT_SECRET",
+        "COOKIE_SECRET",
+        "ALIBABA_*"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": [
+        "DATABASE_URL",
+        "STORE_CORS",
+        "ADMIN_CORS",
+        "AUTH_CORS",
+        "JWT_SECRET",
+        "COOKIE_SECRET",
+        "ALIBABA_*"
+      ]
+    },
+    "lint": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] },
+    "test": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
+    "test:integration": { "dependsOn": ["^build"], "outputs": ["coverage/**"] }
+  }
+}
