@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Achilles Store — Outdoor, EDC e equipamentos</title>
+  <desc id="description">Card social da Achilles Store em carvão, coyote e laranja.</desc>
+  <rect width="1200" height="630" fill="#111315"/>
+  <path fill="#2D3330" d="M0 475 250 260l160 145 205-225 260 250 150-130 175 170v160H0Z"/>
+  <path fill="#4B5542" opacity=".7" d="M0 535 290 350l175 150 210-160 235 150 155-95 135 100v135H0Z"/>
+  <g transform="translate(78 74) scale(1.45)">
+    <path fill="#111315" stroke="#B68A58" stroke-width="3" d="M36 3 65 14v22c0 20-11 33-29 41C18 69 7 56 7 36V14L36 3Z"/>
+    <path fill="none" stroke="#F4EFE8" stroke-linecap="square" stroke-width="6" d="m21 56 15-34 15 34M27 44h18"/>
+    <path fill="#E96A1A" d="M30 63h12v4H30z"/>
+  </g>
+  <text x="230" y="132" fill="#F4EFE8" font-family="Arial, sans-serif" font-size="48" font-weight="800" letter-spacing="5">ACHILLES STORE</text>
+  <text x="84" y="270" fill="#F4EFE8" font-family="Arial, sans-serif" font-size="72" font-weight="800">Equipamentos para</text>
+  <text x="84" y="350" fill="#F4EFE8" font-family="Arial, sans-serif" font-size="72" font-weight="800">ir mais longe.</text>
+  <rect x="84" y="393" width="92" height="7" fill="#E96A1A"/>
+  <text x="84" y="445" fill="#D7C2A4" font-family="Arial, sans-serif" font-size="25" letter-spacing="3">OUTDOOR · EDC · CAMPING · ILUMINAÇÃO</text>
+</svg>

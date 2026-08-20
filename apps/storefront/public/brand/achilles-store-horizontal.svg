@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 80" role="img" aria-labelledby="title description">
+  <title id="title">Achilles Store</title>
+  <desc id="description">Assinatura horizontal provisória com escudo e monograma A.</desc>
+  <g transform="translate(3)">
+    <path fill="#111315" stroke="#B68A58" stroke-width="3" d="M36 3 65 14v22c0 20-11 33-29 41C18 69 7 56 7 36V14L36 3Z"/>
+    <path fill="none" stroke="#F4EFE8" stroke-linecap="square" stroke-width="6" d="m21 56 15-34 15 34M27 44h18"/>
+    <path fill="#E96A1A" d="M30 63h12v4H30z"/>
+  </g>
+  <text x="92" y="39" fill="#111315" font-family="Arial, sans-serif" font-size="27" font-weight="800" letter-spacing="2">ACHILLES</text>
+  <text x="94" y="61" fill="#4B5542" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="8">STORE</text>
+</svg>

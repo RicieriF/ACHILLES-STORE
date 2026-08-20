@@ -1,6 +1,7 @@
 import type { PublicCategoryDTO } from "@achilles/domain";
 import Link from "next/link";
 import { Container } from "../ui/primitives";
+import { BrandLogo } from "./brand-logo";
 
 const groups = [
   [
@@ -17,11 +18,17 @@ export const SiteFooter = ({
   <footer className="site-footer">
     <Container>
       <div className="footer-lead">
-        <Link href="/" className="wordmark wordmark--light">
-          <span>ACHILLES</span>
-          <small>STORE</small>
+        <Link
+          href="/"
+          className="footer-brand"
+          aria-label="Achilles Store — início"
+        >
+          <BrandLogo variant="monochrome" />
         </Link>
-        <p>Equipamentos selecionados para acompanhar jornadas reais.</p>
+        <p>
+          Outdoor, EDC e equipamentos selecionados para acompanhar jornadas
+          reais.
+        </p>
       </div>
       <div className="footer-grid">
         {groups.map(([title, links]) => (

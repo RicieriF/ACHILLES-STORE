@@ -124,6 +124,33 @@ test("mobile navigation uses the same dynamic category list", async ({
   await expect(
     menu.getByRole("link", { name: "Mochilas e Bolsas" }),
   ).toHaveCount(0);
+  await expect(
+    menu.getByRole("link", { name: "Everyday Carry — EDC" }),
+  ).toHaveCount(0);
+});
+
+test("official brand assets adapt between desktop and mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const desktopLogo = page.locator(".brand-link__desktop img");
+  const mobileLogo = page.locator(".brand-link__mobile img");
+  await expect(desktopLogo).toBeVisible();
+  await expect(desktopLogo).toHaveAttribute(
+    "src",
+    /achilles-store-horizontal\.svg/,
+  );
+  await expect(mobileLogo).toBeHidden();
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+    "href",
+    /brand\/favicon\.svg/,
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(desktopLogo).toBeHidden();
+  await expect(mobileLogo).toBeVisible();
+  await expect(mobileLogo).toHaveAttribute("src", /achilles-store-symbol\.svg/);
 });
 
 test("sitemap contains only eligible public catalog URLs", async ({

@@ -1,5 +1,9 @@
 # Arquitetura até a TASK 005
 
+> A direção de identidade, os slots de assets oficiais e o planejamento de EDC,
+> mercado brasileiro, kits e compliance de acessórios relacionados a armas estão
+> registrados em [BRAND.md](./BRAND.md).
+
 O projeto é um monorepo pnpm/Turborepo. `apps/storefront` é o canal Next.js em pt-BR. `apps/commerce` é o Medusa v2 com Admin. Contratos independentes ficam em `packages/domain`, validação de ambiente em `packages/config` e fornecedores atrás de `SupplierConnector`.
 
 ## Commerce core e persistência

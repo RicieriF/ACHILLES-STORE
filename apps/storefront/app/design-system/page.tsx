@@ -30,7 +30,9 @@ export default function DesignSystemPage() {
   return (
     <main id="conteudo" className="ds-page">
       <Container>
-        <p className="eyebrow">TASK 007 · Ambiente de desenvolvimento</p>
+        <p className="eyebrow">
+          Identidade oficial · Ambiente de desenvolvimento
+        </p>
         <h1>Achilles Design System</h1>
         <p className="ds-intro">
           Outdoor técnico, premium e moderno. Esta página não é disponibilizada
@@ -40,12 +42,14 @@ export default function DesignSystemPage() {
           <SectionHeading title="Tokens de cor" />
           <div className="swatches">
             {[
-              ["Carvão", "#1b211d"],
-              ["Grafite", "#303832"],
-              ["Off-white", "#f5f3ec"],
-              ["Oliva", "#64733d"],
-              ["Musgo", "#3e4b35"],
-              ["Areia", "#c7af89"],
+              ["Carvão", "#111315"],
+              ["Grafite", "#2D3330"],
+              ["Coyote", "#B68A58"],
+              ["Areia", "#D7C2A4"],
+              ["Off-white", "#F4EFE8"],
+              ["Oliva", "#4B5542"],
+              ["Laranja", "#E96A1A"],
+              ["Branco", "#FFFFFF"],
             ].map(([name, color]) => (
               <div key={name}>
                 <span style={{ background: color }} />

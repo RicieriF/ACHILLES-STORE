@@ -26,7 +26,12 @@ export async function generateMetadata({
       description: product.shortDescription,
       images: product.images[0]
         ? [{ url: product.images[0].url, alt: product.images[0].alt }]
-        : [{ url: "/images/og-placeholder.svg", alt: "Achilles Store" }],
+        : [
+            {
+              url: "/brand/achilles-store-og.svg",
+              alt: "Achilles Store",
+            },
+          ],
     },
   };
 }

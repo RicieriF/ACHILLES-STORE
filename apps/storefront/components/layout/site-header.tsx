@@ -7,6 +7,7 @@ import { useCart } from "../cart/cart-provider";
 import { CartIcon, MenuIcon, SearchIcon, UserIcon } from "../ui/icons";
 import { Drawer, SearchInput } from "../ui/interactive";
 import { IconButton } from "../ui/primitives";
+import { BrandLogo } from "./brand-logo";
 
 export const SiteHeader = ({
   categories,
@@ -47,11 +48,15 @@ export const SiteHeader = ({
           </IconButton>
           <Link
             href="/"
-            className="wordmark"
+            className="brand-link"
             aria-label="Achilles Store — início"
           >
-            <span>ACHILLES</span>
-            <small>STORE</small>
+            <span className="brand-link__desktop">
+              <BrandLogo priority />
+            </span>
+            <span className="brand-link__mobile">
+              <BrandLogo variant="symbol" priority />
+            </span>
           </Link>
           <nav className="desktop-nav" aria-label="Navegação principal">
             {links.map((link) => (

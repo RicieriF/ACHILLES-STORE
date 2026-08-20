@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 260" role="img" aria-labelledby="title description">
+  <title id="title">Marca principal Achilles Store</title>
+  <desc id="description">Marca principal provisória com escudo e monograma A.</desc>
+  <g transform="translate(104 12)">
+    <path fill="#111315" stroke="#B68A58" stroke-width="3" d="M36 3 65 14v22c0 20-11 33-29 41C18 69 7 56 7 36V14L36 3Z"/>
+    <path fill="none" stroke="#F4EFE8" stroke-linecap="square" stroke-width="6" d="m21 56 15-34 15 34M27 44h18"/>
+    <path fill="#E96A1A" d="M30 63h12v4H30z"/>
+  </g>
+  <text x="140" y="150" text-anchor="middle" fill="#111315" font-family="Arial, sans-serif" font-size="30" font-weight="800" letter-spacing="3">ACHILLES</text>
+  <text x="140" y="181" text-anchor="middle" fill="#4B5542" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="10">STORE</text>
+  <path stroke="#B68A58" stroke-width="2" d="M60 210h160"/>
+  <text x="140" y="235" text-anchor="middle" fill="#2D3330" font-family="Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="3">OUTDOOR · EDC · EQUIPAMENTOS</text>
+</svg>
