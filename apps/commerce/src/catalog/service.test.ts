@@ -93,6 +93,7 @@ describe("PublicCatalogService", () => {
     expect(catalog.categories).toEqual([
       expect.objectContaining({ handle: "iluminacao", productCount: 1 }),
     ]);
+    expect(catalog.products[0]?.shippingOrigin).toBe("BRAZIL");
   });
 
   it("does not search private or internal sourcing data", async () => {
@@ -115,6 +116,7 @@ function offer(productId: string) {
     product_id: productId,
     status: "ACTIVE",
     is_primary: true,
+    fulfillment_mode: "BRAZIL_STOCK",
     cost_quotes: [
       {
         status: "PRICED",

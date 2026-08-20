@@ -8,6 +8,7 @@ import { CartIcon, MenuIcon, SearchIcon, UserIcon } from "../ui/icons";
 import { Drawer, SearchInput } from "../ui/interactive";
 import { IconButton } from "../ui/primitives";
 import { BrandLogo } from "./brand-logo";
+import { publicMenuCategories } from "../../lib/catalog-taxonomy";
 
 export const SiteHeader = ({
   categories,
@@ -18,8 +19,7 @@ export const SiteHeader = ({
   const [searchOpen, setSearchOpen] = useState(false);
   const { cart, openCart } = useCart();
   const links = [
-    { label: "Início", href: "/" },
-    ...categories.slice(0, 4).map((category) => ({
+    ...publicMenuCategories(categories).map((category) => ({
       label: category.title,
       href: `/categoria/${category.handle}`,
     })),
@@ -33,8 +33,8 @@ export const SiteHeader = ({
       </a>
       <header className="site-header">
         <div className="announcement">
-          Curadoria outdoor para uso real <span>•</span> Atendimento em
-          português
+          Lanternas · EDC · Cutelaria · Outdoor <span>•</span> Curadoria
+          responsável
         </div>
         <div className="container site-header__main">
           <IconButton
@@ -127,7 +127,7 @@ export const SiteHeader = ({
           <SearchInput />
         </form>
         <p className="drawer-note">
-          Categorias aparecem automaticamente quando possuem produtos públicos.
+          Somente categorias com produtos aprovados aparecem no menu.
         </p>
       </Drawer>
     </>

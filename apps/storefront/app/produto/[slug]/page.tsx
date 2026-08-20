@@ -93,6 +93,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
               {product.shortDescription}
             </p>
             {product.featured && <Badge>Destaque</Badge>}
+            {product.shippingOrigin === "BRAZIL" && (
+              <Badge tone="sand">Envio do Brasil</Badge>
+            )}
             <PurchasePanel variants={product.variants} />
             <p className="commercial-note">
               Prazo de entrega calculado na próxima etapa. Nenhum prazo estimado
@@ -121,6 +124,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <Tabs
             items={[
               { label: "Descrição", content: <p>{product.description}</p> },
+              {
+                label: "Uso recomendado",
+                content: (
+                  <p>
+                    Consulte a categoria, as variantes e as especificações
+                    validadas deste produto antes de escolher o uso.
+                  </p>
+                ),
+              },
               {
                 label: "Especificações",
                 content: (

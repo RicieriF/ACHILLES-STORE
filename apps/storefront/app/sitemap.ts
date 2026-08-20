@@ -8,6 +8,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const catalog = await getPublicCatalog().catch(() => null);
   return [
     { url: siteUrl, changeFrequency: "daily", priority: 1 },
+    ...[
+      "sobre",
+      "contato",
+      "entrega",
+      "trocas-e-devolucoes",
+      "privacidade",
+      "termos",
+    ].map((slug) => ({
+      url: `${siteUrl}/institucional/${slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.4,
+    })),
     ...(catalog?.categories.map((category) => ({
       url: `${siteUrl}/categoria/${category.handle}`,
       lastModified: new Date(),

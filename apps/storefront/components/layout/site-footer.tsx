@@ -2,13 +2,25 @@ import type { PublicCategoryDTO } from "@achilles/domain";
 import Link from "next/link";
 import { Container } from "../ui/primitives";
 import { BrandLogo } from "./brand-logo";
+import { publicMenuCategories } from "../../lib/catalog-taxonomy";
 
 const groups = [
   [
     "Atendimento",
-    ["Fale conosco", "Dúvidas frequentes", "Trocas e devoluções"],
+    [
+      ["Contato", "contato"],
+      ["Entrega", "entrega"],
+      ["Trocas e devoluções", "trocas-e-devolucoes"],
+    ],
   ],
-  ["Institucional", ["Sobre a Achilles", "Curadoria", "Contato"]],
+  [
+    "Informações",
+    [
+      ["Sobre a Achilles", "sobre"],
+      ["Privacidade", "privacidade"],
+      ["Termos", "termos"],
+    ],
+  ],
 ] as const;
 export const SiteFooter = ({
   categories,
@@ -34,14 +46,10 @@ export const SiteFooter = ({
         {groups.map(([title, links]) => (
           <div key={title}>
             <strong>{title}</strong>
-            {links.map((label) => (
-              <a
-                key={label}
-                href="#footer"
-                aria-label={`${label} — conteúdo futuro`}
-              >
+            {links.map(([label, slug]) => (
+              <Link key={slug} href={`/institucional/${slug}`}>
                 {label}
-              </a>
+              </Link>
             ))}
           </div>
         ))}
@@ -50,22 +58,23 @@ export const SiteFooter = ({
           {categories.length === 0 ? (
             <span>Curadoria em preparação</span>
           ) : (
-            categories.slice(0, 5).map((category) => (
-              <Link key={category.id} href={`/categoria/${category.handle}`}>
-                {category.title}
-              </Link>
-            ))
+            publicMenuCategories(categories)
+              .slice(0, 5)
+              .map((category) => (
+                <Link key={category.id} href={`/categoria/${category.handle}`}>
+                  {category.title}
+                </Link>
+              ))
           )}
         </div>
         <div>
           <strong>Redes sociais</strong>
-          <a href="#footer">Instagram — em breve</a>
-          <a href="#footer">YouTube — em breve</a>
+          <span>Perfis oficiais serão publicados antes do lançamento.</span>
         </div>
       </div>
       <div className="footer-bottom" id="footer">
         <span>© 2026 Achilles Store</span>
-        <span>Políticas em preparação para operação comercial.</span>
+        <span>Conteúdo operacional provisório até o go-live.</span>
       </div>
     </Container>
   </footer>

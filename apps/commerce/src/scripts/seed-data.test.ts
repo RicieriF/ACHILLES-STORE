@@ -4,7 +4,10 @@ import { developmentCategories, developmentProducts } from "./seed-data";
 describe("development seed", () => {
   it("contains the required Brazilian outdoor categories", () => {
     expect(developmentCategories).toEqual([
-      "Iluminação",
+      "Lanternas",
+      "Everyday Carry — EDC",
+      "Cutelaria",
+      "Camping & Outdoor",
       "Camping",
       "Pesca",
       "Mochilas e Bolsas",

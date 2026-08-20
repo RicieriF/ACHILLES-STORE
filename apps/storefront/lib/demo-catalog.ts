@@ -21,7 +21,7 @@ export const demoProducts: DemoProduct[] = [
     image: "/images/product-light.svg",
     available: true,
     description:
-      "Iluminação compacta para acampamentos, trilhas e uso cotidiano.",
+      "Lanterna compacta para acampamentos, trilhas e uso cotidiano.",
   },
   {
     slug: "lampiao-camp-lumen",
@@ -49,7 +49,7 @@ export const demoProducts: DemoProduct[] = [
 export const demoCategories = [
   {
     title: "Lanternas",
-    subtitle: "Iluminação para cada rota",
+    subtitle: "Luz para cada rota",
     image: "/images/category-light.svg",
     href: "#destaques",
   },
@@ -103,6 +103,7 @@ export const designSystemProduct: PublicProductDTO = {
   available: true,
   featured: true,
   newArrival: false,
+  shippingOrigin: null,
   createdAt: "2026-08-20T00:00:00.000Z",
   updatedAt: "2026-08-20T00:00:00.000Z",
 };

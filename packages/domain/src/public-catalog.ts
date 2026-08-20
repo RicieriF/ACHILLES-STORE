@@ -40,6 +40,7 @@ export type PublicProductDTO = {
   available: boolean;
   featured: boolean;
   newArrival: boolean;
+  shippingOrigin: "BRAZIL" | "INTERNATIONAL" | null;
   createdAt: string;
   updatedAt: string;
 };

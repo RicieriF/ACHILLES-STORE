@@ -7,58 +7,96 @@ import {
   EmptyState,
   SectionHeading,
 } from "../../../components/ui/primitives";
+import {
+  canonicalCategoryHandle,
+  taxonomyItem,
+} from "../../../lib/catalog-taxonomy";
 import { getPublicCatalog } from "../../../lib/commerce";
 
-type CategoryPageProps = { params: Promise<{ handle: string }> };
+type Props = {
+  params: Promise<{ handle: string }>;
+  searchParams: Promise<{ disponibilidade?: string; preco?: string }>;
+};
 
-export async function generateMetadata({
-  params,
-}: CategoryPageProps): Promise<Metadata> {
-  const { handle: rawHandle } = await params;
-  const handle = decodeSegment(rawHandle);
-  const catalog = await getPublicCatalog({ category: handle }).catch(
-    () => null,
-  );
-  const category = catalog?.categories.find((item) => item.handle === handle);
-  if (!category) notFound();
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const handle = canonicalCategoryHandle(decodeSegment((await params).handle));
+  const item = taxonomyItem(handle);
+  if (!item) notFound();
   return {
-    title: category.title,
-    description:
-      category.description ??
-      `Equipamentos ${category.title} selecionados pela Achilles Store.`,
-    alternates: { canonical: `/categoria/${category.handle}` },
+    title: item.title,
+    description: item.description,
+    alternates: { canonical: `/categoria/${item.handle}` },
+    openGraph: { title: item.title, description: item.description },
   };
 }
 
-export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { handle: rawHandle } = await params;
-  const handle = decodeSegment(rawHandle);
+export default async function CategoryPage({ params, searchParams }: Props) {
+  const handle = canonicalCategoryHandle(decodeSegment((await params).handle));
+  const item = taxonomyItem(handle);
+  if (!item) notFound();
   const catalog = await getPublicCatalog({ category: handle });
-  const category = catalog.categories.find((item) => item.handle === handle);
-  if (!category) notFound();
+  const filters = await searchParams;
+  const products = catalog.products.filter((product) => {
+    if (filters.disponibilidade === "em-estoque" && !product.available)
+      return false;
+    if (filters.preco === "ate-200" && product.price.amount > 200) return false;
+    return true;
+  });
 
   return (
     <main id="conteudo" className="catalog-page">
       <Container>
         <Breadcrumb
-          items={[{ label: "Início", href: "/" }, { label: category.title }]}
+          items={[{ label: "Início", href: "/" }, { label: item.title }]}
         />
         <SectionHeading
           level={1}
           eyebrow="Categoria"
-          title={category.title}
-          description={
-            category.description ??
-            `${category.productCount} ${category.productCount === 1 ? "produto aprovado" : "produtos aprovados"}.`
-          }
+          title={item.title}
+          description={item.description}
         />
-        {catalog.products.length === 0 ? (
-          <EmptyState title="Nenhum produto disponível">
-            Esta categoria não possui itens públicos neste momento.
+        <div
+          className="subcategory-list"
+          aria-label={`Subcategorias de ${item.title}`}
+        >
+          {item.subcategories.map((subcategory) => (
+            <span key={subcategory}>{subcategory}</span>
+          ))}
+        </div>
+        <form
+          className="catalog-filters"
+          method="get"
+          aria-label="Filtros do catálogo"
+        >
+          <label>
+            Disponibilidade
+            <select
+              name="disponibilidade"
+              defaultValue={filters.disponibilidade ?? ""}
+            >
+              <option value="">Todos</option>
+              <option value="em-estoque">Disponíveis</option>
+            </select>
+          </label>
+          <label>
+            Preço
+            <select name="preco" defaultValue={filters.preco ?? ""}>
+              <option value="">Qualquer preço</option>
+              <option value="ate-200">Até R$ 200</option>
+            </select>
+          </label>
+          <button className="button button--secondary" type="submit">
+            Aplicar filtros
+          </button>
+        </form>
+        {products.length === 0 ? (
+          <EmptyState title="Seleção em preparação">
+            Nenhum item desta categoria concluiu todos os gates de publicação
+            neste momento.
           </EmptyState>
         ) : (
           <div className="product-grid catalog-grid">
-            {catalog.products.map((product) => (
+            {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

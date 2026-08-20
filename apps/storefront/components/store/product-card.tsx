@@ -20,6 +20,9 @@ export const ProductCard = ({ product }: { product: PublicProductDTO }) => (
       {(product.featured || product.newArrival) && (
         <Badge tone="olive">{product.featured ? "Destaque" : "Novidade"}</Badge>
       )}
+      {product.shippingOrigin === "BRAZIL" && (
+        <span className="product-card__origin">Envio do Brasil</span>
+      )}
       {!product.available && (
         <span className="product-card__unavailable">Indisponível</span>
       )}
