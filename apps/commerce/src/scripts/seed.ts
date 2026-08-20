@@ -23,6 +23,16 @@ import {
   primaryFulfillmentMode,
 } from "@achilles/domain";
 import { developmentCategories, developmentProducts } from "./seed-data";
+import { SUPPLIER_DOMAIN_MODULE } from "../modules/supplier-domain";
+import type SupplierDomainModuleService from "../modules/supplier-domain/service";
+
+type CatalogQuery = {
+  graph(input: {
+    entity: string;
+    fields: string[];
+    filters?: Record<string, unknown>;
+  }): Promise<{ data: Array<{ id: string; handle: string }> }>;
+};
 
 const updateStoreCurrencies = createWorkflow(
   "achilles-update-store-currencies",
@@ -49,6 +59,9 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
   const salesChannelService = container.resolve(Modules.SALES_CHANNEL);
   const productService = container.resolve(Modules.PRODUCT);
   const fulfillmentService = container.resolve(Modules.FULFILLMENT);
+  const query = container.resolve<CatalogQuery>(
+    ContainerRegistrationKeys.QUERY,
+  );
 
   logger.info("Seeding Achilles Store development commerce data...");
 
@@ -111,24 +124,31 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     });
   }
 
-  const existingCategories = await productService.listProductCategories({});
-  const categoryByName = new Map(
-    existingCategories.map((category) => [category.name, category]),
+  const categoryHandle = (name: string) =>
+    name.toLocaleLowerCase("pt-BR").replaceAll(" ", "-");
+  const { data: existingCategories } = await query.graph({
+    entity: "product_category",
+    fields: ["id", "handle"],
+    filters: { handle: developmentCategories.map(categoryHandle) },
+  });
+  const categoryByHandle = new Map(
+    existingCategories.map((category) => [category.handle, category]),
   );
   const missingCategoryNames = developmentCategories.filter(
-    (name) => !categoryByName.has(name),
+    (name) => !categoryByHandle.has(categoryHandle(name)),
   );
   if (missingCategoryNames.length > 0) {
     const { result } = await createProductCategoriesWorkflow(container).run({
       input: {
         product_categories: missingCategoryNames.map((name) => ({
           name,
+          handle: categoryHandle(name),
           is_active: true,
         })),
       },
     });
     for (const category of result) {
-      categoryByName.set(category.name, category);
+      categoryByHandle.set(category.handle, category);
     }
   }
 
@@ -162,7 +182,9 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     await createProductsWorkflow(container).run({
       input: {
         products: productsToCreate.map((product) => {
-          const category = categoryByName.get(product.category);
+          const category = categoryByHandle.get(
+            categoryHandle(product.category),
+          );
           if (!category) {
             throw new Error(`Missing seed category: ${product.category}`);
           }
@@ -198,6 +220,124 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
         }),
       },
     });
+  }
+
+  const supplierDomain = container.resolve<SupplierDomainModuleService>(
+    SUPPLIER_DOMAIN_MODULE,
+  );
+  const seededProducts = await productService.listProducts({
+    handle: developmentProducts.map((product) => product.handle),
+  });
+  const [manualSupplier] = await supplierDomain.listSuppliers({
+    name: "[FICTÍCIO] Fábrica Outdoor Manual",
+  });
+  const supplier =
+    manualSupplier ??
+    (await supplierDomain.createSuppliers({
+      name: "[FICTÍCIO] Fábrica Outdoor Manual",
+      provider: "MANUAL",
+      status: "ACTIVE",
+      country_code: "CN",
+      contact_name: "Contato de desenvolvimento",
+      contact_email: "dev-supplier@example.invalid",
+      notes: "Fornecedor fictício criado pela TASK 003.",
+      metadata: { seed: "TASK_003_DEVELOPMENT_ONLY" },
+    }));
+  const alternate =
+    (
+      await supplierDomain.listSuppliers({
+        name: "[FICTÍCIO] Fornecedor Alternativo",
+      })
+    )[0] ??
+    (await supplierDomain.createSuppliers({
+      name: "[FICTÍCIO] Fornecedor Alternativo",
+      provider: "OTHER",
+      status: "ACTIVE",
+      country_code: "CN",
+      notes: "Alternativa fictícia para demonstrar múltiplas ofertas.",
+      metadata: { seed: "TASK_003_DEVELOPMENT_ONLY" },
+    }));
+  const branding =
+    (
+      await supplierDomain.listBrandingProfiles({ name: "Perfil Achilles Dev" })
+    )[0] ??
+    (await supplierDomain.createBrandingProfiles({
+      supplier_id: supplier.id,
+      name: "Perfil Achilles Dev",
+      brand_name: "[FICTÍCIO] Achilles Outdoor",
+      language: "pt-BR",
+      packaging_instructions:
+        "Embalagem neutra com referência de marca fictícia.",
+      insert_instructions: "Manual em português para demonstração.",
+      branding_moq: 20,
+      setup_cost: "45.00",
+      per_unit_branding_cost: "1.25",
+      currency: "USD",
+      lead_time_days: 12,
+    }));
+
+  const mainProduct = seededProducts[0];
+  if (mainProduct) {
+    const existingOffers = await supplierDomain.listSupplierOffers({
+      product_id: mainProduct.id,
+    });
+    if (existingOffers.length === 0) {
+      await supplierDomain.createSupplierOffers([
+        {
+          supplier_id: supplier.id,
+          branding_profile_id: branding.id,
+          product_id: mainProduct.id,
+          supplier_product_id: "DEV-PRIMARY-001",
+          source_url: "https://example.invalid/dev-primary-001",
+          currency: "USD",
+          unit_cost: "8.50",
+          moq: 1,
+          availability: "IN_STOCK",
+          status: "ACTIVE",
+          fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
+          private_label_supported: true,
+          branding_moq: 20,
+          branding_lead_time_days: 12,
+          is_primary: true,
+          sync_status: "NEVER_SYNCED",
+          notes: "Oferta fictícia principal.",
+        },
+        {
+          supplier_id: alternate.id,
+          product_id: mainProduct.id,
+          supplier_product_id: "DEV-ALT-001",
+          source_url: "https://example.invalid/dev-alternate-001",
+          currency: "USD",
+          unit_cost: "9.10",
+          moq: 1,
+          availability: "UNKNOWN",
+          status: "ACTIVE",
+          fulfillment_mode: "GENERIC_DROPSHIP",
+          private_label_supported: false,
+          is_primary: false,
+          sync_status: "NEVER_SYNCED",
+          notes: "Oferta fictícia alternativa.",
+        },
+      ]);
+    }
+  }
+
+  for (const [index, product] of seededProducts.entries()) {
+    const existingPolicy = await supplierDomain.listProductPolicies({
+      product_id: product.id,
+    });
+    if (existingPolicy.length === 0) {
+      await supplierDomain.createProductPolicies({
+        product_id: product.id,
+        fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
+        compliance_status: index === 1 ? "REVIEW_REQUIRED" : "PENDING",
+        sensitivity: "ORDINARY",
+        compliance_notes:
+          index === 1
+            ? "Exemplo fictício encaminhado para revisão administrativa."
+            : "Avaliação inicial pendente.",
+      });
+    }
   }
 
   logger.info("Achilles Store development seed completed.");

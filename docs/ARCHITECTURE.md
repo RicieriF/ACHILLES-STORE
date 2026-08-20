@@ -1,4 +1,4 @@
-# Arquitetura até a TASK 002
+# Arquitetura até a TASK 003
 
 O projeto é um monorepo pnpm/Turborepo. `apps/storefront` é o canal Next.js em pt-BR. `apps/commerce` é o Medusa v2 com Admin. Contratos independentes ficam em `packages/domain`, validação de ambiente em `packages/config` e fornecedores atrás de `SupplierConnector`.
 
@@ -14,6 +14,7 @@ O módulo `supplier_domain` persiste apenas conceitos próprios:
 - `SupplierVariantMap`: associa variantes internas aos SKUs/IDs do fornecedor.
 - `BrandingProfile`: instruções e custos de private label como strings decimais.
 - `ProductPolicy`: fulfillment mode, sensibilidade e compliance do produto.
+- `AuditEvent`: trilha extensível de ações administrativas sem segredos.
 
 Links somente de leitura expõem `SupplierOffer -> Product` e `ProductPolicy -> Product`. URL, título, descrição e variantes públicas continuam pertencendo ao Product nativo e não mudam quando o fornecedor é substituído.
 
@@ -30,7 +31,18 @@ O seed configura canal `Achilles Store Brasil`, região `Brasil / BRL`, país `b
 3. `pnpm seed`
 4. `pnpm dev`
 
-`/health` é liveness. `/ready` consulta PostgreSQL e confirma as cinco tabelas próprias; nunca retorna ready quando o banco está indisponível ou a migração está incompleta.
+`/health` é liveness. `/ready` consulta PostgreSQL e confirma as tabelas próprias; nunca retorna ready quando o banco está indisponível ou a migração está incompleta.
+
+## Admin e ambiente
+
+As customizações usam UI routes nativas do Medusa, um widget em
+`product.details` e APIs autenticadas em `/admin/achilles/*`. O módulo
+`supplier_domain` permanece como fonte única de suppliers, offers, branding,
+políticas e auditoria. Trocar a oferta principal nunca altera nem remove Product.
+
+O `.env` da raiz é localizado pelo marcador do workspace. Apps não mantêm
+cópias locais de segredos. Fake Redis, Local Event Bus e locking em memória são
+somente opções de desenvolvimento; produção deverá usar implementações duráveis.
 
 ## Limites
 

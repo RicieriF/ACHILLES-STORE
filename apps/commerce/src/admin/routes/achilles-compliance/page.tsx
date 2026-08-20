@@ -1,0 +1,113 @@
+import { defineRouteConfig } from "@medusajs/admin-sdk";
+import { Badge, Button, Container, Heading, Text } from "@medusajs/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../components/page-state";
+import { sdk } from "../../lib/sdk";
+import type { ProductPolicy } from "../../lib/types";
+
+type PolicyList = { policies: ProductPolicy[] };
+const labels = {
+  PENDING: "Pendente",
+  CLEAR: "Liberado",
+  REVIEW_REQUIRED: "Revisão obrigatória",
+  BLOCKED: "Bloqueado",
+};
+const colors = {
+  PENDING: "orange",
+  CLEAR: "green",
+  REVIEW_REQUIRED: "orange",
+  BLOCKED: "red",
+} as const;
+
+const CompliancePage = () => {
+  const client = useQueryClient();
+  const query = useQuery({
+    queryKey: ["achilles-policies"],
+    queryFn: () => sdk.client.fetch<PolicyList>("/admin/achilles/policies"),
+  });
+  const update = useMutation({
+    mutationFn: ({
+      policy,
+      status,
+    }: {
+      policy: ProductPolicy;
+      status: ProductPolicy["compliance_status"];
+    }) =>
+      sdk.client.fetch(`/admin/achilles/policies/${policy.id}`, {
+        method: "POST",
+        body: {
+          fulfillment_mode: policy.fulfillment_mode,
+          compliance_status: status,
+          sensitivity: policy.sensitivity,
+          compliance_notes: policy.compliance_notes ?? null,
+        },
+      }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["achilles-policies"] }),
+  });
+  if (query.isPending) return <LoadingState />;
+  if (query.isError) return <ErrorState message={String(query.error)} />;
+  return (
+    <div className="flex flex-col gap-y-3">
+      <Container>
+        <Heading level="h1">Compliance</Heading>
+        <Text className="text-ui-fg-subtle">
+          Fila de revisão com regras obrigatórias para itens sensíveis.
+        </Text>
+      </Container>
+      {!query.data.policies.length ? (
+        <EmptyState>Nenhum produto aguardando avaliação.</EmptyState>
+      ) : (
+        query.data.policies.map((policy) => (
+          <Container key={policy.id}>
+            <div className="flex justify-between gap-4">
+              <div>
+                <Heading level="h2">Produto {policy.product_id}</Heading>
+                <Text>Sensibilidade: {policy.sensitivity}</Text>
+                <Text>{policy.compliance_notes || "Sem observação"}</Text>
+              </div>
+              <div className="flex max-w-md flex-wrap items-center justify-end gap-2">
+                <Badge color={colors[policy.compliance_status]}>
+                  {labels[policy.compliance_status]}
+                </Badge>
+                <Button
+                  variant="secondary"
+                  disabled={policy.sensitivity !== "ORDINARY"}
+                  onClick={() => {
+                    update.mutate({ policy, status: "CLEAR" });
+                  }}
+                >
+                  Aprovar
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={policy.sensitivity === "CONTROLLED_ITEM"}
+                  onClick={() => {
+                    update.mutate({ policy, status: "REVIEW_REQUIRED" });
+                  }}
+                >
+                  Marcar revisão
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    update.mutate({ policy, status: "BLOCKED" });
+                  }}
+                >
+                  Bloquear
+                </Button>
+              </div>
+            </div>
+          </Container>
+        ))
+      )}
+    </div>
+  );
+};
+
+export const config = defineRouteConfig({ label: "ACHILLES · Compliance" });
+export default CompliancePage;

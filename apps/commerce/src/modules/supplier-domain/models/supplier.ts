@@ -8,6 +8,11 @@ const Supplier = model
     name: model.text().searchable(),
     provider: model.text(),
     status: model.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+    country_code: model.text().default("CN"),
+    contact_name: model.text().nullable(),
+    contact_email: model.text().nullable(),
+    contact_phone: model.text().nullable(),
+    notes: model.text().nullable(),
     metadata: model.json().nullable(),
     offers: model.hasMany(() => SupplierOffer, { mappedBy: "supplier" }),
     branding_profiles: model.hasMany(() => BrandingProfile, {

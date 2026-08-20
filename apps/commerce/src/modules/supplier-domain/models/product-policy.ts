@@ -14,6 +14,8 @@ const ProductPolicy = model
       .enum(["ORDINARY", "EDGED_TOOL", "CONTROLLED_ITEM"])
       .default("ORDINARY"),
     compliance_notes: model.text().nullable(),
+    reviewed_by: model.text().nullable(),
+    reviewed_at: model.dateTime().nullable(),
   })
   .indexes([
     {

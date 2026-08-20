@@ -3,6 +3,7 @@ export const requiredCommerceTables = [
   "supplier_offer",
   "supplier_variant_map",
   "branding_profile",
+  "audit_event",
   "product_policy",
 ] as const;
 

@@ -1,6 +1,6 @@
 # ACHILLES STORE
 
-Commerce core modular do e-commerce outdoor brasileiro. A implementação atual cobre até a TASK 002 — Commerce Core e Persistência.
+Commerce core modular do e-commerce outdoor brasileiro. A implementação atual cobre até a TASK 003 — Admin de Fornecedores, Private Label e Compliance.
 
 ## Requisitos
 
@@ -17,6 +17,10 @@ Commerce core modular do e-commerce outdoor brasileiro. A implementação atual 
 5. Opcionalmente, carregue os dados fictícios com `pnpm seed`.
 6. Inicie commerce/admin e storefront com `pnpm dev`.
 
+O `.env` da raiz é a única fonte local do monorepo. Commerce e storefront
+localizam a raiz pelo `pnpm-workspace.yaml`; não copie `.env` para os apps e não
+automatize cópias de segredos.
+
 O storefront responde em `http://localhost:3000` e commerce/Medusa Admin em `http://localhost:9000`. Os endpoints operacionais são:
 
 - `GET /health`: comprova somente que o processo responde.
@@ -32,6 +36,15 @@ O storefront responde em `http://localhost:3000` e commerce/Medusa Admin em `htt
 - Custos próprios são strings decimais validadas, sem ponto flutuante JavaScript.
 
 O seed é idempotente para canal, região, categorias e produtos, recusa `NODE_ENV=production` e usa somente produtos `[FICTÍCIO]`, sem imagens externas.
+
+## Administração ACHILLES STORE
+
+Abra `http://localhost:9000/app`. As extensões incluem fornecedores, produtos e
+fornecedores, private label, compliance e a página informativa Importações. As
+APIs próprias ficam sob `/admin/achilles` e exigem autenticação Medusa.
+
+Importações não possui integração funcional. Todas as capacidades Alibaba
+continuam desativadas.
 
 ## Quality gates
 
@@ -51,5 +64,10 @@ Testes persistentes exigem PostgreSQL. A CI inicia PostgreSQL 17, executa `pnpm 
 ## Segurança e limitações
 
 Todas as flags Alibaba permanecem `false`. Não existem chamadas/scraping Alibaba, pedido ou pagamento de fornecedor, Mercado Pago, checkout brasileiro completo, Pricing Engine ou regras fiscais inventadas. O seed não configura logística de checkout.
+
+Fake Redis, Local Event Bus e locking em memória são aceitáveis somente no
+desenvolvimento. Produção exigirá componentes duráveis. O aviso transitivo do
+driver `pg` observado no seed pertence à árvore do Medusa e não foi escondido
+com downgrade ou dependência duplicada.
 
 Consulte `docs/ARCHITECTURE.md` para os limites entre Medusa e o domínio próprio.

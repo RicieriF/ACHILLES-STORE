@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { parseFeatureFlags, parseServerEnvironment } from "./index.js";
+import {
+  findWorkspaceRoot,
+  parseFeatureFlags,
+  parseServerEnvironment,
+} from "./index.js";
+
+describe("workspace environment", () => {
+  it("locates one monorepo root from package directories", () => {
+    expect(findWorkspaceRoot(process.cwd())).toBeTruthy();
+    expect(findWorkspaceRoot(process.cwd())).not.toMatch(/apps[\\/]commerce$/);
+  });
+});
 
 describe("feature flags", () => {
   it("defaults every Alibaba capability to disabled", () => {

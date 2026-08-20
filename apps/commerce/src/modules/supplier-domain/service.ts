@@ -1,5 +1,6 @@
 import { MedusaService } from "@medusajs/framework/utils";
 import {
+  AuditEvent,
   BrandingProfile,
   ProductPolicy,
   Supplier,
@@ -13,6 +14,7 @@ class SupplierDomainModuleService extends MedusaService({
   SupplierVariantMap,
   BrandingProfile,
   ProductPolicy,
+  AuditEvent,
 }) {}
 
 export default SupplierDomainModuleService;

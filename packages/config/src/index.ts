@@ -1,4 +1,15 @@
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
+
+export function findWorkspaceRoot(startDirectory: string): string {
+  const current = resolve(startDirectory);
+  if (existsSync(join(current, "pnpm-workspace.yaml"))) return current;
+  const parent = dirname(current);
+  if (parent === current)
+    throw new Error("Could not locate pnpm workspace root");
+  return findWorkspaceRoot(parent);
+}
 
 const disabledByDefault = z
   .enum(["true", "false"])
