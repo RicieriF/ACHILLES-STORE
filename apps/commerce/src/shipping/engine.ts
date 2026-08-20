@@ -294,6 +294,8 @@ export class ShippingQuoteEngine {
 
     const routing = this.router.route(candidates, {
       privateLabelRequired: requiredMode === "PRIVATE_LABEL_DROPSHIP",
+      preferBrazilStockWhenCompetitive:
+        this.flags.PREFER_BRAZIL_STOCK_WHEN_COMPETITIVE,
     });
     await this.persistRoutingDecision({
       productId: product.id,
@@ -484,7 +486,7 @@ export class ShippingQuoteEngine {
     if (offer.supplier?.provider === "ALIBABA")
       return new AlibabaShippingQuoteProvider(this.flags.ALIBABA_FREIGHT_QUOTE);
     if (offer.supplier?.provider === "CJ")
-      return new CJShippingQuoteProvider(this.flags.CJ_SHIPPING_QUOTE);
+      return new CJShippingQuoteProvider(this.flags.CJ_SHIPPING);
     return new ManualShippingQuoteProvider([]);
   }
 

@@ -61,6 +61,30 @@ describe("admin supplier validation", () => {
     }
   });
 
+  it("accepts a manual Brazil Stock supplier and operational offer metadata", () => {
+    expect(
+      supplierInput.parse({
+        name: "Distribuidor Nacional",
+        provider: "BRAZIL_STOCK",
+        country_code: "BR",
+      }).provider,
+    ).toBe("BRAZIL_STOCK");
+    expect(
+      supplierOfferInput.parse({
+        ...offer,
+        currency: "BRL",
+        fulfillment_mode: "BRAZIL_STOCK",
+        private_label_supported: false,
+        branding_moq: null,
+        freight_metadata: {
+          delivery_days: 3,
+          shipping_mode: "DOMESTIC_MANUAL",
+          tracking_supported: true,
+        },
+      }).freight_metadata,
+    ).toMatchObject({ delivery_days: 3, tracking_supported: true });
+  });
+
   it("does not apply create defaults to omitted PATCH fields", () => {
     expect(supplierOfferPatchInput.parse({ availability: "IN_STOCK" })).toEqual(
       { availability: "IN_STOCK" },

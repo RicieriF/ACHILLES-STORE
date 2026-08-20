@@ -8,8 +8,13 @@ import { MercadoPagoPaymentProvider } from "./mercado-pago-provider";
 const enabled = (name: string): boolean => process.env[name] === "true";
 
 export function resolvePaymentProvider(): CustomerPaymentProvider {
-  if (enabled("PAYMENT_TEST_PROVIDER_ENABLED"))
+  if (enabled("PAYMENT_TEST_PROVIDER_ENABLED")) {
+    const environment =
+      process.env.APP_ENV ?? process.env.NODE_ENV ?? "development";
+    if (!["development", "test", "staging"].includes(environment))
+      throw new Error("PAYMENT_TEST_PROVIDER_FORBIDDEN_IN_PRODUCTION");
     return new FakePaymentProvider();
+  }
   if (!enabled("MERCADO_PAGO_ENABLED"))
     throw new Error("PAYMENT_PROVIDER_DISABLED");
   return new MercadoPagoPaymentProvider({

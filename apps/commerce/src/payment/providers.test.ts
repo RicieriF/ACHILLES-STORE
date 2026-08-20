@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MercadoPagoPaymentProvider } from "./mercado-pago-provider";
 import { FakePaymentProvider } from "./test-provider";
+import { resolvePaymentProvider } from "./provider";
 
 const base = {
   idempotencyKey: "logical-attempt-1",
@@ -11,7 +12,18 @@ const base = {
 };
 
 describe("payment providers", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  const originalEnvironment = { ...process.env };
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    process.env = { ...originalEnvironment };
+  });
+
+  it("bloqueia provider fake em produção", () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.APP_ENV;
+    process.env.PAYMENT_TEST_PROVIDER_ENABLED = "true";
+    expect(() => resolvePaymentProvider()).toThrow(/FORBIDDEN/);
+  });
 
   it("simula Pix pendente sem marcar como pago", async () => {
     const result = await new FakePaymentProvider().createPaymentIntent({

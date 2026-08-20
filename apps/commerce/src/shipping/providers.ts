@@ -140,3 +140,5 @@ export class CJShippingQuoteProvider extends DisabledExternalShippingProvider {
   readonly provider = "CJ";
   readonly endpointNames = [] as const;
 }
+
+export class CJShippingProvider extends CJShippingQuoteProvider {}

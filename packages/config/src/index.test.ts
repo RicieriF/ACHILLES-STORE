@@ -20,11 +20,17 @@ describe("feature flags", () => {
       ALIBABA_ORDER_CREATE: false,
       ALIBABA_ORDER_PAY: false,
       ALIBABA_TRACKING: false,
-      CJ_PRODUCT_LOOKUP: false,
-      CJ_SHIPPING_QUOTE: false,
+      CJ_ENABLED: false,
+      CJ_PRODUCT_IMPORT: false,
+      CJ_STOCK: false,
+      CJ_SHIPPING: false,
       CJ_ORDER_CREATE: false,
       CJ_ORDER_PAY: false,
       CJ_TRACKING: false,
+      EMAIL_ENABLED: false,
+      RESEND_ENABLED: false,
+      VIACEP_ENABLED: false,
+      PREFER_BRAZIL_STOCK_WHEN_COMPETITIVE: false,
       MERCADO_PAGO_ENABLED: false,
       MERCADO_PAGO_PIX: false,
       MERCADO_PAGO_CARD: false,
@@ -51,6 +57,28 @@ describe("server environment", () => {
     expect(parseServerEnvironment(validEnvironment)).toMatchObject({
       BUSINESS_LOCALE: "pt-BR",
       DISPLAY_TIMEZONE: "America/Sao_Paulo",
+      APP_ENV: "development",
+    });
+  });
+  it("rejects wildcard CORS in production", () => {
+    expect(() =>
+      parseServerEnvironment({
+        ...validEnvironment,
+        APP_ENV: "production",
+        STORE_CORS: "*",
+      }),
+    ).toThrow(/wildcard/);
+  });
+  it("accepts explicit multi-origin CORS and blank optional service URLs", () => {
+    expect(
+      parseServerEnvironment({
+        ...validEnvironment,
+        STORE_CORS: "https://store.example,https://staging.example",
+        REDIS_URL: "",
+      }),
+    ).toMatchObject({
+      STORE_CORS: "https://store.example,https://staging.example",
+      REDIS_URL: undefined,
     });
   });
 

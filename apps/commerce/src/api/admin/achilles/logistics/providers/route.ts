@@ -31,13 +31,13 @@ export async function GET(
       new AlibabaShippingQuoteProvider(
         flags.ALIBABA_FREIGHT_QUOTE,
       ).getCapabilities(),
-      new CJShippingQuoteProvider(flags.CJ_SHIPPING_QUOTE).getCapabilities(),
+      new CJShippingQuoteProvider(flags.CJ_SHIPPING).getCapabilities(),
     ],
     flags: {
       ALIBABA_FREIGHT_QUOTE: flags.ALIBABA_FREIGHT_QUOTE,
       ALIBABA_ORDER_CREATE: flags.ALIBABA_ORDER_CREATE,
       ALIBABA_ORDER_PAY: flags.ALIBABA_ORDER_PAY,
-      CJ_SHIPPING_QUOTE: flags.CJ_SHIPPING_QUOTE,
+      CJ_SHIPPING: flags.CJ_SHIPPING,
       CJ_ORDER_CREATE: flags.CJ_ORDER_CREATE,
       CJ_ORDER_PAY: flags.CJ_ORDER_PAY,
     },

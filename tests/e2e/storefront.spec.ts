@@ -1082,3 +1082,88 @@ test("TASK 012 cenário B: aumento de custo bloqueia execução e aparece no Adm
     );
   }
 });
+
+test("TASK 014 staging-like mantém fluxo público e expõe Integration Hub autenticado", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180_000);
+  mkdirSync("artifacts/task-014", { recursive: true });
+
+  const storefrontHealth = await request.get(
+    "http://localhost:3000/api/health",
+  );
+  expect(storefrontHealth.status()).toBe(200);
+  expect(storefrontHealth.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(storefrontHealth.headers()["x-frame-options"]).toBe("DENY");
+
+  const anonymous = await request.get(
+    "http://localhost:9000/admin/achilles/integrations",
+  );
+  expect(anonymous.status()).toBe(401);
+
+  const token = await adminAuth(request);
+  const headers = { authorization: `Bearer ${token}` };
+  const response = await request.get(
+    "http://localhost:9000/admin/achilles/integrations",
+    { headers },
+  );
+  expect(response.status()).toBe(200);
+  const data = (await response.json()) as {
+    integrations: Array<{
+      id: string;
+      status: string;
+      capabilities: Record<string, boolean>;
+    }>;
+  };
+  expect(data.integrations.find((item) => item.id === "cj")).toMatchObject({
+    status: "DISABLED",
+    capabilities: { orderCreate: false, orderPay: false },
+  });
+  expect(
+    data.integrations.find((item) => item.id === "alibaba")?.capabilities,
+  ).toMatchObject({ orderCreate: false, orderPay: false });
+  expect(JSON.stringify(data)).not.toMatch(
+    /MERCADO_PAGO_ACCESS_TOKEN|ALIBABA_APP_SECRET|RESEND_API_KEY/,
+  );
+
+  await adminLogin(page, token);
+  await page.goto("http://localhost:9000/app/achilles-integrations");
+  await expect(page.getByTestId("integration-hub")).toBeVisible();
+  await expect(page.getByTestId("integration-cj")).toContainText("DISABLED");
+  await page.screenshot({
+    path: "artifacts/task-014/integration-hub.png",
+    fullPage: true,
+  });
+  await page.getByTestId("health-dashboard").screenshot({
+    path: "artifacts/task-014/health.png",
+  });
+  await page.getByTestId("integration-mercado-pago").screenshot({
+    path: "artifacts/task-014/mercado-pago-status.png",
+  });
+  await page.getByTestId("integration-cj").screenshot({
+    path: "artifacts/task-014/cj-status.png",
+  });
+
+  await page.goto("http://localhost:9000/app/achilles-settings");
+  await expect(page.getByTestId("settings-page")).toBeVisible();
+  await page.screenshot({
+    path: "artifacts/task-014/settings.png",
+    fullPage: true,
+  });
+
+  await page.goto("http://localhost:9000/app/achilles-brazil-stock");
+  await expect(page.getByTestId("brazil-stock-page")).toBeVisible();
+  await page.screenshot({
+    path: "artifacts/task-014/brazil-stock.png",
+    fullPage: true,
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("http://localhost:3000");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.screenshot({
+    path: "artifacts/task-014/mobile-storefront-staging.png",
+    fullPage: true,
+  });
+});

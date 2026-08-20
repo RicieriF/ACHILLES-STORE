@@ -10,6 +10,7 @@ export type SupplierRoutingWeights = {
   privateLabelBonus: number;
   privateLabelMismatchPenalty: number;
   warningPenalty: number;
+  competitiveBrazilBonus: number;
 };
 
 const defaultWeights: SupplierRoutingWeights = {
@@ -19,6 +20,7 @@ const defaultWeights: SupplierRoutingWeights = {
   privateLabelBonus: 15,
   privateLabelMismatchPenalty: 100,
   warningPenalty: 4,
+  competitiveBrazilBonus: 12,
 };
 
 export class SupplierRouter {
@@ -26,10 +28,18 @@ export class SupplierRouter {
 
   route(
     candidates: readonly ShippingRoutingCandidate[],
-    input: { privateLabelRequired: boolean },
+    input: {
+      privateLabelRequired: boolean;
+      preferBrazilStockWhenCompetitive?: boolean;
+    },
   ): SupplierRoutingResult {
     const eligible = candidates.filter((candidate) => candidate.available);
     const scores: Record<string, number> = {};
+    const cheapest = Math.min(
+      ...eligible.map((candidate) =>
+        Number(candidate.deliveredSupplierCostBrl),
+      ),
+    );
     for (const candidate of eligible) {
       const cost = Number(candidate.deliveredSupplierCostBrl);
       const averageEta =
@@ -44,6 +54,19 @@ export class SupplierRouter {
             ? -this.weights.privateLabelMismatchPenalty
             : 0) -
         candidate.warnings.length * this.weights.warningPenalty;
+      const brazilCompetitive =
+        input.preferBrazilStockWhenCompetitive === true &&
+        candidate.fulfillmentMode === "BRAZIL_STOCK" &&
+        cost <= cheapest * 1.1 &&
+        averageEta <= 10 &&
+        (candidate.marginPercent === undefined ||
+          candidate.marginPercent >= 10) &&
+        (candidate.reliabilityScore === undefined ||
+          candidate.reliabilityScore >= 0.7);
+      if (brazilCompetitive)
+        scores[candidate.quoteId] =
+          (scores[candidate.quoteId] ?? 0) +
+          this.weights.competitiveBrazilBonus;
     }
     const ranked = [...eligible].sort(
       (left, right) =>
