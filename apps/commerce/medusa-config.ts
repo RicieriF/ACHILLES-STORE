@@ -15,4 +15,5 @@ module.exports = defineConfig({
       cookieSecret: environment.COOKIE_SECRET,
     },
   },
+  modules: [{ resolve: "./src/modules/supplier-domain" }],
 });

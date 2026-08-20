@@ -5,3 +5,5 @@ export const fulfillmentModes = [
 ] as const;
 
 export type FulfillmentMode = (typeof fulfillmentModes)[number];
+
+export const primaryFulfillmentMode: FulfillmentMode = "PRIVATE_LABEL_DROPSHIP";

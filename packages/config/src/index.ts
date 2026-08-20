@@ -33,6 +33,21 @@ export const serverEnvironmentSchema = z
     AUTH_CORS: z.string().min(1),
     JWT_SECRET: z.string().min(24),
     COOKIE_SECRET: z.string().min(24),
+    BUSINESS_LOCALE: z.string().min(2).default("pt-BR"),
+    DISPLAY_TIMEZONE: z
+      .string()
+      .refine(
+        (timezone) => {
+          try {
+            new Intl.DateTimeFormat("pt-BR", { timeZone: timezone });
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: "DISPLAY_TIMEZONE must be a valid IANA timezone" },
+      )
+      .default("America/Sao_Paulo"),
   })
   .and(featureFlagSchema);
 
