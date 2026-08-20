@@ -17,6 +17,12 @@ import {
   TaxpayerIdentity,
   PaymentIntent,
   PaymentProviderEvent,
+  CustomerOrder,
+  SupplierFulfillmentPlan,
+  FulfillmentGroup,
+  SupplierOrder,
+  FulfillmentTracking,
+  OrderException,
 } from "./models";
 
 class SupplierDomainModuleService extends MedusaService({
@@ -37,6 +43,12 @@ class SupplierDomainModuleService extends MedusaService({
   TaxpayerIdentity,
   PaymentIntent,
   PaymentProviderEvent,
+  CustomerOrder,
+  SupplierFulfillmentPlan,
+  FulfillmentGroup,
+  SupplierOrder,
+  FulfillmentTracking,
+  OrderException,
 }) {}
 
 export default SupplierDomainModuleService;

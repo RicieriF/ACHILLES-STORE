@@ -85,7 +85,7 @@ export function ConfirmationClient() {
           <span>✓</span>
           <h1>Pagamento confirmado</h1>
           <p>
-            Número interno: <code>{data.payment.id}</code>
+            Pedido: <strong>{data.payment.customerOrder?.reference}</strong>
           </p>
           <p>
             <strong>{data.payment.amount.formatted}</strong> ·{" "}
@@ -104,9 +104,17 @@ export function ConfirmationClient() {
             </p>
           )}
           <Alert tone="info">
-            O acompanhamento e a autorização de fulfillment serão tratados na
-            próxima etapa. Nenhum pedido foi enviado ao fornecedor.
+            Pedido recebido. A compra junto ao fornecedor depende de revisão e
+            aprovação humana; nenhuma execução real é automática.
           </Alert>
+          {data.payment.customerOrder && (
+            <Link
+              className="button"
+              href={`/pedido/${data.payment.customerOrder.reference}?token=${encodeURIComponent(data.payment.customerOrder.accessToken)}`}
+            >
+              Acompanhar pedido
+            </Link>
+          )}
           <Link className="button button--secondary" href="/">
             Voltar à loja
           </Link>

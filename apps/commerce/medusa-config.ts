@@ -1,10 +1,12 @@
 import { defineConfig, loadEnv } from "@medusajs/framework/utils";
 import { findWorkspaceRoot, parseServerEnvironment } from "@achilles/config";
 
+const runtimeEnvironment = { ...process.env };
 loadEnv(
   process.env.NODE_ENV ?? "development",
   findWorkspaceRoot(process.cwd()),
 );
+Object.assign(process.env, runtimeEnvironment);
 const environment = parseServerEnvironment(process.env);
 
 module.exports = defineConfig({

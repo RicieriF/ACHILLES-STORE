@@ -25,45 +25,62 @@ export const supplierInput = z.object({
   metadata: safeMetadata,
 });
 
+const supplierOfferShape = {
+  supplier_id: z.string().min(1),
+  product_id: z.string().min(1),
+  supplier_product_id: z.string().trim().min(1).max(200),
+  source_url: z
+    .url()
+    .refine((url) => ["http:", "https:"].includes(new URL(url).protocol)),
+  currency: z
+    .string()
+    .trim()
+    .length(3)
+    .transform((value) => value.toUpperCase()),
+  unit_cost: decimal,
+  moq: z.number().int().positive(),
+  availability: z.enum(["UNKNOWN", "IN_STOCK", "OUT_OF_STOCK"]),
+  availability_quantity: z.number().int().nonnegative().nullable().optional(),
+  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  fulfillment_mode: z.enum([
+    "PRIVATE_LABEL_DROPSHIP",
+    "GENERIC_DROPSHIP",
+    "BRAZIL_STOCK",
+  ]),
+  private_label_supported: z.boolean(),
+  branding_moq: z.number().int().positive().nullable().optional(),
+  branding_lead_time_days: z.number().int().nonnegative().nullable().optional(),
+  branding_profile_id: z.string().nullable().optional(),
+  is_primary: z.boolean().default(false),
+  freight_metadata: safeMetadata,
+  notes: nullableText,
+};
+
 export const supplierOfferInput = z
-  .object({
-    supplier_id: z.string().min(1),
-    product_id: z.string().min(1),
-    supplier_product_id: z.string().trim().min(1).max(200),
-    source_url: z
-      .url()
-      .refine((url) => ["http:", "https:"].includes(new URL(url).protocol)),
-    currency: z
-      .string()
-      .trim()
-      .length(3)
-      .transform((value) => value.toUpperCase()),
-    unit_cost: decimal,
-    moq: z.number().int().positive(),
-    availability: z.enum(["UNKNOWN", "IN_STOCK", "OUT_OF_STOCK"]),
-    availability_quantity: z.number().int().nonnegative().nullable().optional(),
-    status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
-    fulfillment_mode: z.enum([
-      "PRIVATE_LABEL_DROPSHIP",
-      "GENERIC_DROPSHIP",
-      "BRAZIL_STOCK",
-    ]),
-    private_label_supported: z.boolean(),
-    branding_moq: z.number().int().positive().nullable().optional(),
-    branding_lead_time_days: z
-      .number()
-      .int()
-      .nonnegative()
-      .nullable()
-      .optional(),
-    branding_profile_id: z.string().nullable().optional(),
-    is_primary: z.boolean().default(false),
-    freight_metadata: safeMetadata,
-    notes: nullableText,
-  })
+  .object(supplierOfferShape)
   .superRefine((value, context) => {
     if (
       !value.private_label_supported &&
+      (value.branding_moq || value.branding_profile_id)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["private_label_supported"],
+        message: "Branding exige suporte a private label",
+      });
+    }
+  });
+
+export const supplierOfferPatchInput = z
+  .object({
+    ...supplierOfferShape,
+    status: z.enum(["ACTIVE", "INACTIVE"]),
+    is_primary: z.boolean(),
+  })
+  .partial()
+  .superRefine((value, context) => {
+    if (
+      value.private_label_supported === false &&
       (value.branding_moq || value.branding_profile_id)
     ) {
       context.addIssue({

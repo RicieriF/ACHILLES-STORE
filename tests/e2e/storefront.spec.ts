@@ -1,5 +1,13 @@
 import { createHmac } from "node:crypto";
-import { expect, test } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
+
+test.describe.configure({ mode: "serial" });
 
 test("public journey reaches a real Medusa cart", async ({ page }) => {
   await page.goto("/");
@@ -362,8 +370,160 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
     page.getByRole("heading", { name: "Pagamento confirmado" }),
   ).toBeVisible({ timeout: 12_000 });
   await expect(
-    page.getByText(/Nenhum pedido foi enviado ao fornecedor/),
+    page.getByText(/nenhuma execução real é automática/i),
   ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Acompanhar pedido" }),
+  ).toHaveAttribute("href", /\/pedido\/ACH-\d{4}-\d{6,}\?token=/);
+});
+
+test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking público", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(240_000);
+  mkdirSync("artifacts/task-012", { recursive: true });
+  const paid = await createPaidOrder(request);
+  const auth = await adminAuth(request);
+  const headers = { authorization: `Bearer ${auth}` };
+  const list = await request.get(
+    "http://localhost:9000/admin/achilles/orders",
+    { headers },
+  );
+  expect(list.status()).toBe(200);
+  const listed = (await list.json()) as {
+    orders: Array<{ id: string; reference: string }>;
+  };
+  const order = listed.orders.find(
+    (candidate) => candidate.reference === paid.reference,
+  );
+  expect(order).toBeTruthy();
+  if (!order) throw new Error("Customer Order não apareceu no Admin");
+  const detailBefore = await request.get(
+    `http://localhost:9000/admin/achilles/orders/${order.id}`,
+    { headers },
+  );
+  expect(detailBefore.status()).toBe(200);
+  expect(await detailBefore.json()).toMatchObject({
+    gate: { status: "APPROVAL_REQUIRED" },
+    realExecutionEnabled: false,
+  });
+
+  await adminLogin(page, auth);
+  await page.goto("http://localhost:9000/app/achilles-orders");
+  await expect(
+    page.getByRole("heading", { name: "ACHILLES · Pedidos" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await page.getByText(paid.reference).click();
+  await expect(
+    page.getByRole("heading", { name: "Supplier Order Gate" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "artifacts/task-012/admin-orders.png",
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: "artifacts/task-012/order-detail.png",
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: "artifacts/task-012/supplier-order-gate.png",
+    fullPage: true,
+  });
+  await page.getByRole("checkbox").check();
+  await page.screenshot({
+    path: "artifacts/task-012/approval-confirmation.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "APROVAR PEDIDO AO FORNECEDOR" })
+    .click();
+  await expect(page.getByText("APPROVED").first()).toBeVisible();
+  await page.getByRole("button", { name: "CRIAR PEDIDO TEST/SANDBOX" }).click();
+  await expect(page.getByText(/ACHILLES TEST LOGISTICS/)).toBeVisible();
+  await page.screenshot({
+    path: "artifacts/task-012/sandbox-fulfillment.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "MARCAR TEST SHIPPED" }).click();
+
+  await page.goto(
+    `http://localhost:3000/pedido/${paid.reference}?token=${encodeURIComponent(paid.accessToken)}`,
+  );
+  await expect(
+    page.getByRole("heading", { name: `Pedido ${paid.reference}` }),
+  ).toBeVisible();
+  await expect(page.getByText(/ACHILLES TEST LOGISTICS/)).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(
+    /Alibaba|CJ|SupplierOffer|margem|custo do fornecedor/i,
+  );
+  await page.screenshot({
+    path: "artifacts/task-012/customer-order.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "artifacts/task-012/tracking-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("TASK 012 cenário C: sem estoque apresenta fallback e exige nova aprovação", async ({
+  request,
+}) => {
+  test.setTimeout(240_000);
+  const paid = await createPaidOrder(request);
+  const token = await adminAuth(request);
+  const headers = { authorization: `Bearer ${token}` };
+  const detail = await adminOrderByReference(request, headers, paid.reference);
+  const group = detail.groups[0];
+  if (!group) throw new Error("Fulfillment group ausente");
+  const offerId = group.supplier_offer_id;
+  try {
+    expect(
+      (
+        await request.post(
+          `http://localhost:9000/admin/achilles/offers/${offerId}`,
+          { headers, data: { availability: "OUT_OF_STOCK" } },
+        )
+      ).status(),
+    ).toBe(200);
+    const blocked = await adminOrderByReference(
+      request,
+      headers,
+      paid.reference,
+    );
+    expect(blocked.gate.status).toBe("BLOCKED");
+    expect(blocked.gate.reasons).toContain("OUT_OF_STOCK");
+    const alternativesResponse = await request.get(
+      `http://localhost:9000/admin/achilles/orders/${blocked.order.id}/alternatives`,
+      { headers },
+    );
+    const alternatives = (await alternativesResponse.json()) as {
+      alternatives: Array<{ offer_id: string }>;
+    };
+    const alternative = alternatives.alternatives.find(
+      (candidate) => candidate.offer_id !== offerId,
+    );
+    expect(alternative).toBeTruthy();
+    if (!alternative) throw new Error("Alternativa não apresentada");
+    const selected = await request.post(
+      `http://localhost:9000/admin/achilles/orders/${blocked.order.id}/alternative`,
+      {
+        headers,
+        data: { groupId: group.id, offerId: alternative.offer_id },
+      },
+    );
+    expect(selected.status()).toBe(200);
+    expect(await selected.json()).toMatchObject({
+      plan: { status: "APPROVAL_REQUIRED", approved_at: null },
+    });
+  } finally {
+    await request.post(
+      `http://localhost:9000/admin/achilles/offers/${offerId}`,
+      { headers, data: { availability: "IN_STOCK" } },
+    );
+  }
 });
 
 test("card double submit is idempotent, decline preserves checkout and retry approves", async ({
@@ -495,6 +655,200 @@ async function reachPaymentPage(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Pagamento" })).toBeVisible();
 }
 
+type Task12AdminDetail = {
+  order: { id: string; reference: string };
+  plan: { status: string; approved_at: string | null } | null;
+  groups: Array<{ id: string; supplier_offer_id: string }>;
+  gate: { status: string; reasons: string[] };
+  supplierOrders: unknown[];
+};
+
+async function createPaidOrder(request: APIRequestContext): Promise<{
+  reference: string;
+  accessToken: string;
+  paymentIntentId: string;
+}> {
+  const commerce = "http://localhost:9000";
+  const catalog = await request.get(`${commerce}/achilles/store/catalog`);
+  const catalogBody = (await catalog.json()) as {
+    products: Array<{ variants: Array<{ id: string }> }>;
+  };
+  const variantId = catalogBody.products[0]?.variants[0]?.id;
+  if (!variantId) throw new Error("Variante pública ausente");
+  const cartResponse = await request.post(`${commerce}/achilles/store/carts`);
+  const { cart } = (await cartResponse.json()) as { cart: { id: string } };
+  expect(
+    (
+      await request.post(`${commerce}/achilles/store/carts/${cart.id}/items`, {
+        data: { variantId, quantity: 1 },
+      })
+    ).status(),
+  ).toBe(200);
+  const checkoutResponse = await request.post(
+    `${commerce}/achilles/store/checkout`,
+    { data: { cartId: cart.id } },
+  );
+  const checkoutBody = (await checkoutResponse.json()) as {
+    checkout: { id: string };
+  };
+  const checkoutId = checkoutBody.checkout.id;
+  await request.patch(
+    `${commerce}/achilles/store/checkout/${checkoutId}/customer`,
+    {
+      data: {
+        name: "Cliente Sandbox",
+        email: "sandbox@example.com",
+        phone: "(27) 99999-9999",
+      },
+    },
+  );
+  await request.patch(
+    `${commerce}/achilles/store/checkout/${checkoutId}/address`,
+    {
+      data: {
+        postalCode: "01310-100",
+        street: "Avenida Paulista",
+        number: "1000",
+        complement: null,
+        neighborhood: "Bela Vista",
+        city: "São Paulo",
+        state: "SP",
+        countryCode: "BR",
+      },
+    },
+  );
+  const quoteResponse = await request.post(
+    `${commerce}/achilles/store/checkout/${checkoutId}/shipping/quote`,
+  );
+  const quoteBody = (await quoteResponse.json()) as {
+    checkout: {
+      shippingGroups: Array<{
+        id: string;
+        methods: Array<{ id: string; name: string }>;
+      }>;
+    };
+  };
+  for (const group of quoteBody.checkout.shippingGroups) {
+    const method =
+      group.methods.find((candidate) => /Expressa/.test(candidate.name)) ??
+      group.methods[0];
+    if (!method) throw new Error("Método DDP de teste ausente");
+    const selected = await request.post(
+      `${commerce}/achilles/store/checkout/${checkoutId}/shipping/select`,
+      { data: { groupId: group.id, quoteId: method.id } },
+    );
+    expect(selected.status()).toBe(200);
+  }
+  expect(
+    (
+      await request.get(
+        `${commerce}/achilles/store/checkout/${checkoutId}/review`,
+      )
+    ).status(),
+  ).toBe(200);
+  expect(
+    (
+      await request.post(
+        `${commerce}/achilles/store/checkout/${checkoutId}/ready`,
+      )
+    ).status(),
+  ).toBe(200);
+  const paymentResponse = await request.post(
+    `${commerce}/achilles/store/payment-intents`,
+    {
+      data: {
+        checkoutId,
+        method: "PIX",
+        attemptId: crypto.randomUUID(),
+        cpf: "529.982.247-25",
+      },
+    },
+  );
+  if (paymentResponse.status() !== 201)
+    throw new Error(
+      `Payment fixture failed (${String(paymentResponse.status())}): ${await paymentResponse.text()}`,
+    );
+  const payment = (await paymentResponse.json()) as {
+    paymentIntent: { id: string };
+  };
+  const eventId = `evt_task12_${crypto.randomUUID()}`;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const manifest = `id:${payment.paymentIntent.id.toLowerCase()};request-id:${eventId};ts:${timestamp};`;
+  const signature = createHmac("sha256", "playwright_test_webhook_secret_only")
+    .update(manifest)
+    .digest("hex");
+  const event = {
+    headers: { "x-signature": `ts=${timestamp},v1=${signature}` },
+    data: {
+      paymentIntentId: payment.paymentIntent.id,
+      status: "PAID",
+      eventId,
+    },
+  };
+  expect(
+    (await request.post(`${commerce}/webhooks/test-payment`, event)).status(),
+  ).toBe(200);
+  expect(
+    (await request.post(`${commerce}/webhooks/test-payment`, event)).status(),
+  ).toBe(200);
+  const status = await request.get(
+    `${commerce}/achilles/store/payment-intents/${payment.paymentIntent.id}`,
+  );
+  const statusBody = (await status.json()) as {
+    paymentIntent: {
+      customerOrder: { reference: string; accessToken: string } | null;
+    };
+  };
+  if (!statusBody.paymentIntent.customerOrder)
+    throw new Error("Customer Order não criado para pagamento PAID");
+  return {
+    ...statusBody.paymentIntent.customerOrder,
+    paymentIntentId: payment.paymentIntent.id,
+  };
+}
+
+async function adminAuth(request: APIRequestContext): Promise<string> {
+  const response = await request.post(
+    "http://localhost:9000/auth/user/emailpass",
+    {
+      data: {
+        email: "e2e-admin@example.invalid",
+        password: "E2eOnly_012_Strong",
+      },
+    },
+  );
+  expect(response.status()).toBe(200);
+  const body = (await response.json()) as { token?: string };
+  if (!body.token) throw new Error("Token Admin E2E ausente");
+  return body.token;
+}
+
+async function adminOrderByReference(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  reference: string,
+): Promise<Task12AdminDetail> {
+  const list = await request.get(
+    "http://localhost:9000/admin/achilles/orders",
+    { headers },
+  );
+  const body = (await list.json()) as {
+    orders: Array<{ id: string; reference: string }>;
+  };
+  const summary = body.orders.find((order) => order.reference === reference);
+  if (!summary) throw new Error("Pedido não listado no Admin");
+  const detail = await request.get(
+    `http://localhost:9000/admin/achilles/orders/${summary.id}`,
+    { headers },
+  );
+  expect(detail.status()).toBe(200);
+  return (await detail.json()) as Task12AdminDetail;
+}
+
+async function adminLogin(page: Page, token: string): Promise<void> {
+  await page.setExtraHTTPHeaders({ authorization: `Bearer ${token}` });
+}
+
 function multiShipmentFixture(expiresAt: string) {
   const money = (amount: number) => ({
     amount,
@@ -584,3 +938,60 @@ function multiShipmentFixture(expiresAt: string) {
     notice: null,
   };
 }
+
+test("TASK 012 cenário B: aumento de custo bloqueia execução e aparece no Admin", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(240_000);
+  mkdirSync("artifacts/task-012", { recursive: true });
+  const paid = await createPaidOrder(request);
+  const token = await adminAuth(request);
+  const headers = { authorization: `Bearer ${token}` };
+  const detail = await adminOrderByReference(request, headers, paid.reference);
+  const group = detail.groups[0];
+  if (!group) throw new Error("Fulfillment group ausente");
+  const offerId = group.supplier_offer_id;
+  const offerResponse = await request.get(
+    `http://localhost:9000/admin/achilles/offers/${offerId}`,
+    { headers },
+  );
+  const offerBody = (await offerResponse.json()) as {
+    offer: { unit_cost: string };
+  };
+  const original = offerBody.offer.unit_cost;
+  try {
+    const changed = (Number(original) + 3).toFixed(2);
+    expect(
+      (
+        await request.post(
+          `http://localhost:9000/admin/achilles/offers/${offerId}`,
+          { headers, data: { unit_cost: changed } },
+        )
+      ).status(),
+    ).toBe(200);
+    const blocked = await adminOrderByReference(
+      request,
+      headers,
+      paid.reference,
+    );
+    expect(blocked.gate).toMatchObject({ status: "REVIEW_REQUIRED" });
+    expect(blocked.gate.reasons).toContain("PRICE_CHANGED");
+    expect(blocked.supplierOrders).toHaveLength(0);
+    await adminLogin(page, token);
+    await page.goto("http://localhost:9000/app/achilles-orders");
+    await page.getByText(paid.reference).click();
+    await expect(
+      page.getByText("Custo do fornecedor mudou desde a venda."),
+    ).toBeVisible();
+    await page.screenshot({
+      path: "artifacts/task-012/exception-state.png",
+      fullPage: true,
+    });
+  } finally {
+    await request.post(
+      `http://localhost:9000/admin/achilles/offers/${offerId}`,
+      { headers, data: { unit_cost: original } },
+    );
+  }
+});

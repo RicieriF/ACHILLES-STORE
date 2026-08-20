@@ -10,7 +10,7 @@ import {
   stripUndefined,
   type AdminRequest,
 } from "../../http";
-import { supplierOfferInput } from "../../schemas";
+import { supplierOfferPatchInput } from "../../schemas";
 import { markOfferPricingStale } from "../../../../../pricing/service";
 
 export async function GET(
@@ -37,11 +37,7 @@ export async function POST(
   request: AdminRequest,
   response: MedusaResponse,
 ): Promise<void> {
-  const input = parseOrReply(
-    supplierOfferInput.partial(),
-    request.body,
-    response,
-  );
+  const input = parseOrReply(supplierOfferPatchInput, request.body, response);
   if (!input) return;
   const service = request.scope.resolve<SupplierDomainModuleService>(
     SUPPLIER_DOMAIN_MODULE,
