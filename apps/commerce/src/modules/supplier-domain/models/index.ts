@@ -15,3 +15,9 @@ export { default as CheckoutShippingSelection } from "./checkout-shipping-select
 export { default as TaxpayerIdentity } from "./taxpayer-identity";
 export { default as PaymentIntent } from "./payment-intent";
 export { default as PaymentProviderEvent } from "./payment-provider-event";
+export { default as CustomerOrder } from "./customer-order";
+export { default as SupplierFulfillmentPlan } from "./supplier-fulfillment-plan";
+export { default as FulfillmentGroup } from "./fulfillment-group";
+export { default as SupplierOrder } from "./supplier-order";
+export { default as FulfillmentTracking } from "./fulfillment-tracking";
+export { default as OrderException } from "./order-exception";

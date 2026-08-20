@@ -6,6 +6,7 @@ import {
   pricingAssumptionsInput,
   supplierInput,
   supplierOfferInput,
+  supplierOfferPatchInput,
 } from "./schemas";
 
 const offer = {
@@ -58,6 +59,15 @@ describe("admin supplier validation", () => {
           .fulfillment_mode,
       ).toBe(fulfillment_mode);
     }
+  });
+
+  it("does not apply create defaults to omitted PATCH fields", () => {
+    expect(supplierOfferPatchInput.parse({ availability: "IN_STOCK" })).toEqual(
+      { availability: "IN_STOCK" },
+    );
+    expect(supplierOfferPatchInput.parse({ unit_cost: "8.50" })).toEqual({
+      unit_cost: "8.50",
+    });
   });
 
   it("requires private-label capability for branding configuration", () => {

@@ -1,5 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const e2eEnvironment = {
+  PAYMENT_TEST_PROVIDER_ENABLED: "true",
+  PAYMENT_TEST_WEBHOOK_SECRET: "playwright_test_webhook_secret_only",
+  E2E_ADMIN_PASSWORD: "E2eOnly_012_Strong",
+};
+Object.assign(process.env, e2eEnvironment);
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
@@ -15,8 +22,7 @@ export default defineConfig({
       timeout: 240_000,
       env: {
         ...process.env,
-        PAYMENT_TEST_PROVIDER_ENABLED: "true",
-        PAYMENT_TEST_WEBHOOK_SECRET: "playwright_test_webhook_secret_only",
+        ...e2eEnvironment,
       },
     },
     {

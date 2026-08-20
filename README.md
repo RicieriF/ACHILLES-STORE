@@ -1,6 +1,8 @@
 # ACHILLES STORE
 
-Commerce core modular do e-commerce outdoor brasileiro. A implementação atual cobre até a TASK 005 — conversão revisada para Product DRAFT e custos preliminares.
+Commerce core modular do e-commerce outdoor brasileiro. A implementação atual
+cobre Customer Order, planejamento de fulfillment, aprovação humana e execução
+exclusivamente sandbox até a TASK 012.
 
 ## Requisitos
 
@@ -96,12 +98,22 @@ pnpm test:e2e
 
 Testes persistentes exigem PostgreSQL. A CI inicia PostgreSQL 17, executa `pnpm db:migrate` e `pnpm seed` antes dos testes de integração.
 
+## Pedidos e fulfillment
+
+Um `PaymentIntent PAID` cria um Order pelo workflow oficial do Medusa e uma
+referência Achilles idempotente. O planejamento com fornecedores sempre passa
+pelo Supplier Order Gate e por aprovação humana. Alibaba e CJ continuam
+fail-closed; somente o provider TEST pode criar uma ordem sandbox.
+
+Consulte `docs/FULFILLMENT.md` para Customer Order, roteamento, aprovação,
+fallback, tracking, exceções e limites de PII.
+
 ## Segurança e limitações
 
-Todas as flags Alibaba permanecem `false` por padrão. Não existem pedido ou
-pagamento de fornecedor, Mercado Pago, checkout brasileiro completo, provider
-FX pago ou regras fiscais universais inventadas. A coleta opcional não contorna CAPTCHA,
-login, rate limit ou proteção anti-bot. O seed não configura logística de checkout.
+Todas as flags de escrita/pagamento Alibaba e CJ permanecem `false` por padrão.
+Não existe pedido ou pagamento real de fornecedor, provider FX pago ou regra
+fiscal universal inventada. A coleta opcional não contorna CAPTCHA, login, rate
+limit ou proteção anti-bot.
 
 Fake Redis, Local Event Bus e locking em memória são aceitáveis somente no
 desenvolvimento. Produção exigirá componentes duráveis. O aviso transitivo do

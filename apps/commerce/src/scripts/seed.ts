@@ -299,7 +299,7 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
           status: "ACTIVE",
           fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
           private_label_supported: true,
-          branding_moq: 20,
+          branding_moq: 1,
           branding_lead_time_days: 12,
           is_primary: true,
           sync_status: "NEVER_SYNCED",
@@ -390,8 +390,29 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     const productOffers = await supplierDomain.listSupplierOffers({
       product_id: mainProduct.id,
     });
-    const primaryOffer = productOffers.find((offer) => offer.is_primary);
-    const alternateOffer = productOffers.find((offer) => !offer.is_primary);
+    const primaryOffer = productOffers.find(
+      (offer) => offer.supplier_product_id === "DEV-LANTERNA-PRIMARY-001",
+    );
+    const alternateOffer = productOffers.find(
+      (offer) => offer.supplier_product_id === "DEV-LANTERNA-ALT-001",
+    );
+    for (const offer of productOffers) {
+      if (offer.id !== primaryOffer?.id && offer.is_primary)
+        await supplierDomain.updateSupplierOffers({
+          id: offer.id,
+          is_primary: false,
+        });
+    }
+    if (primaryOffer)
+      await supplierDomain.updateSupplierOffers({
+        id: primaryOffer.id,
+        is_primary: true,
+        unit_cost: "8.50",
+        availability: "IN_STOCK",
+        branding_moq: 1,
+        notes:
+          "Oferta fictícia principal; MOQ 1 exclusivo do sandbox local da TASK 012.",
+      });
     const primaryShippingFixture = {
       source: "TASK_009_DEVELOPMENT_FIXTURE",
       shipping_methods: [
@@ -459,6 +480,9 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     if (alternateOffer)
       await supplierDomain.updateSupplierOffers({
         id: alternateOffer.id,
+        is_primary: false,
+        unit_cost: "9.10",
+        availability: "UNKNOWN",
         freight_metadata: alternateShippingFixture,
       });
     for (const offer of productOffers) {
@@ -528,6 +552,8 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
       } else {
         await supplierDomain.updateCostQuotes({
           id: existingQuote.id,
+          status: "PRICED",
+          supplier_unit_cost: "8.50",
           fx_rate: "5.00",
           fx_source: "TASK_009_DEVELOPMENT_FIXTURE",
           fx_captured_at: new Date(),

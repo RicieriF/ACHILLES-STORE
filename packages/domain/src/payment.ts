@@ -60,6 +60,10 @@ export type PublicPaymentIntentDTO = {
     testOnly: boolean;
   } | null;
   installments: readonly PaymentInstallmentDTO[];
+  customerOrder: {
+    reference: string;
+    accessToken: string;
+  } | null;
 };
 
 export type CreateProviderPaymentInput = {

@@ -9,6 +9,7 @@ import type {
 import type { MedusaContainer } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { CheckoutService } from "../checkout/service";
+import { CustomerOrderService } from "../orders/customer-order-service";
 import { assertValidCpf, maskCpf } from "./cpf";
 import { resolvePaymentProvider } from "./provider";
 
@@ -125,7 +126,7 @@ export class PaymentService {
       .update(`${input.checkoutId}:${input.method}:${input.attemptId}`)
       .digest("hex");
     const existing = await this.findByIdempotency(idempotencyKey);
-    if (existing) return toPublic(existing);
+    if (existing) return this.present(existing);
 
     const id = `pay_${randomUUID().replaceAll("-", "")}`;
     const externalReference = `${input.checkoutId}:${id}`;
@@ -198,10 +199,11 @@ export class PaymentService {
       );
       return required(result.rows[0]);
     });
-    if (created.id !== id) return toPublic(created);
+    if (created.id !== id) return this.present(created);
 
+    let providerResult: ProviderPaymentResult;
     try {
-      const result = await provider.createPaymentIntent({
+      providerResult = await provider.createPaymentIntent({
         idempotencyKey,
         externalReference,
         method: input.method,
@@ -214,7 +216,6 @@ export class PaymentService {
         },
         card: input.card,
       });
-      return toPublic(await this.applyProviderResult(id, result));
     } catch (error) {
       const unavailable =
         error instanceof Error &&
@@ -238,10 +239,11 @@ export class PaymentService {
         503,
       );
     }
+    return this.present(await this.applyProviderResult(id, providerResult));
   }
 
   async retrieve(id: string): Promise<PublicPaymentIntentDTO> {
-    return toPublic(await this.getRecord(id));
+    return this.present(await this.getRecord(id));
   }
 
   async poll(id: string): Promise<PublicPaymentIntentDTO> {
@@ -250,12 +252,12 @@ export class PaymentService {
       !["PENDING", "PROCESSING"].includes(record.status) ||
       !record.provider_order_id
     )
-      return toPublic(record);
-    if (record.provider === "TEST") return toPublic(record);
+      return this.present(record);
+    if (record.provider === "TEST") return this.present(record);
     const result = await safeProvider().getPaymentStatus(
       record.provider_order_id,
     );
-    return toPublic(await this.applyProviderResult(record.id, result));
+    return this.present(await this.applyProviderResult(record.id, result));
   }
 
   async processProviderEvent(input: {
@@ -266,7 +268,7 @@ export class PaymentService {
     payloadHash: string;
     testStatus?: PaymentIntentStatus;
   }): Promise<PublicPaymentIntentDTO | null> {
-    return this.database.transaction(async (trx) => {
+    const processed = await this.database.transaction(async (trx) => {
       const payment = await trx.raw<PaymentRecord>(
         `select p.*, t.normalized_value from payment_intent p left join taxpayer_identity t on t.id = p.taxpayer_identity_id
          where p.provider = ? and p.provider_order_id = ? and p.deleted_at is null for update of p`,
@@ -286,7 +288,7 @@ export class PaymentService {
           input.payloadHash,
         ],
       );
-      if (!inserted.rows[0]) return record ? toPublic(record) : null;
+      if (!inserted.rows[0]) return record ?? null;
       if (!record) {
         await trx.raw(
           "update payment_provider_event set status = 'IGNORED', processed_at = now(), updated_at = now() where id = ?",
@@ -307,8 +309,9 @@ export class PaymentService {
         "update payment_provider_event set status = 'PROCESSED', processed_at = now(), updated_at = now() where id = ?",
         [eventId],
       );
-      return toPublic(updated);
+      return updated;
     });
+    return processed ? this.present(processed) : null;
   }
 
   async processTestEvent(input: {
@@ -391,6 +394,22 @@ export class PaymentService {
       },
     );
     return this.getRecord(id, database);
+  }
+
+  private async present(
+    record: PaymentRecord,
+  ): Promise<PublicPaymentIntentDTO> {
+    if (record.status === "PAID")
+      await new CustomerOrderService(this.container).ensureForPaidPayment(
+        record.id,
+      );
+    const customerOrder =
+      record.status === "PAID"
+        ? await new CustomerOrderService(this.container).publicAccessForPayment(
+            record.id,
+          )
+        : null;
+    return { ...toPublic(record), customerOrder };
   }
 
   private async findByIdempotency(
@@ -498,6 +517,7 @@ function toPublic(value: PaymentRecord): PublicPaymentIntentDTO {
         }
       : null,
     installments: display.installments ?? [],
+    customerOrder: null,
   };
 }
 async function paymentAudit(
