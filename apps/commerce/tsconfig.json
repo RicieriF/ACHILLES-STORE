@@ -8,8 +8,14 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "noEmit": true
+    "outDir": ".medusa/server",
+    "rootDir": "."
   },
   "include": ["medusa-config.ts", "src/**/*.ts", "src/**/*.tsx", "*.ts"],
-  "exclude": ["node_modules", ".medusa"]
+  "exclude": [
+    "node_modules",
+    ".medusa",
+    "src/**/*.test.ts",
+    "src/**/*.integration.test.ts"
+  ]
 }
