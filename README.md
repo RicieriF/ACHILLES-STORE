@@ -1,6 +1,6 @@
 # ACHILLES STORE
 
-Commerce core modular do e-commerce outdoor brasileiro. A implementação atual cobre até a TASK 004 — Alibaba URL para ImportDraft revisável.
+Commerce core modular do e-commerce outdoor brasileiro. A implementação atual cobre até a TASK 005 — conversão revisada para Product DRAFT e custos preliminares.
 
 ## Requisitos
 
@@ -46,10 +46,17 @@ APIs próprias ficam sob `/admin/achilles` e exigem autenticação Medusa.
 Com `ALIBABA_PRODUCT_IMPORT=false` (padrão), Importações valida uma URL HTTPS
 Alibaba e cria um draft manual sem chamada externa. Ativar deliberadamente a
 flag permite somente coleta pública conservadora; credenciais oficiais não são
-exigidas. `APPROVED` não cria Product nem SupplierOffer.
+exigidas. `APPROVED` sozinho não cria Product nem SupplierOffer.
+
+Após confirmação humana explícita, um ImportDraft `APPROVED` pode ser convertido
+em Product Medusa `DRAFT`, Supplier/SupplierOffer inativa, CostQuote
+`INCOMPLETE` e ProductPolicy. A conversão não consulta Alibaba, não associa o
+sales channel público e não define preço de venda. Importar ≠ publicar; aprovar
+ImportDraft ≠ vender; converter ≠ comprar fornecedor; CostQuote ≠ preço final.
 
 Endpoints: `POST/GET /admin/achilles/imports`, `GET/PATCH
-/admin/achilles/imports/:id` e ações `reprocess`, `approve` e `reject`.
+/admin/achilles/imports/:id` e ações `reprocess`, `approve`, `reject` e
+`convert`.
 
 ## Quality gates
 

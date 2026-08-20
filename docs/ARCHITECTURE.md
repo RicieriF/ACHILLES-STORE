@@ -1,4 +1,4 @@
-# Arquitetura até a TASK 004
+# Arquitetura até a TASK 005
 
 O projeto é um monorepo pnpm/Turborepo. `apps/storefront` é o canal Next.js em pt-BR. `apps/commerce` é o Medusa v2 com Admin. Contratos independentes ficam em `packages/domain`, validação de ambiente em `packages/config` e fornecedores atrás de `SupplierConnector`.
 
@@ -18,6 +18,8 @@ O módulo `supplier_domain` persiste apenas conceitos próprios:
 - `ImportDraft`: preserva dados brutos e sugestões normalizadas sem criar Product.
 - `ImportAttempt`: snapshot essencial e limitado de cada tentativa, com método,
   resultado, erro e versões do parser/normalizador.
+- `CostQuote`: custos disponíveis e parcelas brasileiras ainda pendentes;
+  nunca é tratado como preço de venda.
 
 Links somente de leitura expõem `SupplierOffer -> Product` e `ProductPolicy -> Product`. URL, título, descrição e variantes públicas continuam pertencendo ao Product nativo e não mudam quando o fornecedor é substituído.
 
@@ -70,6 +72,25 @@ ativo pela URL canônica e preserva o histórico de tentativas.
 O `.env` da raiz é localizado pelo marcador do workspace. Apps não mantêm
 cópias locais de segredos. Fake Redis, Local Event Bus e locking em memória são
 somente opções de desenvolvimento; produção deverá usar implementações duráveis.
+
+## Conversão para catálogo interno
+
+Uma ação Admin confirmada converte apenas `ImportDraft APPROVED` e não bloqueado
+em Product oficial Medusa `DRAFT`, sem sales channel e sem preços de variante.
+O workflow aplica compensações reversas se SupplierOffer, VariantMap, CostQuote,
+ProductPolicy ou proveniência falharem. Constraints únicas e lock por draft
+impedem duplicação concorrente.
+
+A proveniência usa `ImportDraft.converted_product_id`,
+`SupplierOffer.import_draft_id`, `raw_source_reference` e
+`ProductPolicy.import_draft_id`. Supplier desconhecido reutiliza um único
+registro inativo `[PENDENTE]`, sem nome empresarial inventado. A oferta nasce
+inativa e private label permanece não confirmado.
+
+`commercial_readiness` é separado do readiness técnico: `PRICING_REQUIRED` para
+triagem limpa e `COMPLIANCE_REQUIRED` para lâminas. Item `BLOCKED` não converte.
+Uma proteção de API impede mudar Product importado para `published` nesta etapa.
+O próximo passo é Pricing Engine; não existe cálculo BRL automático.
 
 ## Limites
 

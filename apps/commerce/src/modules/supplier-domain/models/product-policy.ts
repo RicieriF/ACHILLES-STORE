@@ -16,6 +16,16 @@ const ProductPolicy = model
     compliance_notes: model.text().nullable(),
     reviewed_by: model.text().nullable(),
     reviewed_at: model.dateTime().nullable(),
+    commercial_readiness: model
+      .enum([
+        "DATA_INCOMPLETE",
+        "PRICING_REQUIRED",
+        "COMPLIANCE_REQUIRED",
+        "READY_FOR_REVIEW",
+        "BLOCKED",
+      ])
+      .default("DATA_INCOMPLETE"),
+    import_draft_id: model.text().nullable(),
   })
   .indexes([
     {
@@ -25,6 +35,7 @@ const ProductPolicy = model
       where: "deleted_at IS NULL",
     },
     { on: ["compliance_status"] },
+    { on: ["commercial_readiness"] },
   ]);
 
 export default ProductPolicy;

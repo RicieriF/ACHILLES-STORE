@@ -6,3 +6,4 @@ export { default as SupplierVariantMap } from "./supplier-variant-map";
 export { default as AuditEvent } from "./audit-event";
 export { default as ImportDraft } from "./import-draft";
 export { default as ImportAttempt } from "./import-attempt";
+export { default as CostQuote } from "./cost-quote";

@@ -16,6 +16,16 @@ import { sdk } from "../../lib/sdk";
 import type { ImportDraft } from "../../lib/types";
 
 type List = { drafts: ImportDraft[]; count: number };
+type Conversion = {
+  product_id: string;
+  supplier_id: string;
+  supplier_offer_id: string;
+  cost_quote_id: string;
+  product_policy_id: string;
+  idempotent: boolean;
+  commercial_readiness: string;
+  compliance_status: string;
+};
 const labels: Record<ImportDraft["status"], string> = {
   FETCHING: "Coletando",
   PARSED: "Coletado",
@@ -99,6 +109,28 @@ const ImportsPage = () => {
       choose(draft);
       await refresh();
       toast.success("Rascunho salvo");
+    },
+    onError: (error) => toast.error(String(error)),
+  });
+  const convert = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch<{ conversion: Conversion }>(
+        `/admin/achilles/imports/${selected?.id ?? ""}/convert`,
+        { method: "POST" },
+      ),
+    onSuccess: async ({ conversion }) => {
+      if (selected)
+        setSelected({
+          ...selected,
+          converted_product_id: conversion.product_id,
+          conversion_status: "COMPLETED",
+        });
+      await refresh();
+      toast.success(
+        conversion.idempotent
+          ? "Produto interno já existia"
+          : "Produto interno DRAFT criado",
+      );
     },
     onError: (error) => toast.error(String(error)),
   });
@@ -310,6 +342,42 @@ const ImportsPage = () => {
             Aprovação significa apenas dados liberados para a TASK 005; nenhum
             produto fica vendável.
           </Text>
+          {selected.converted_product_id ? (
+            <div className="mt-4 rounded border p-3">
+              <Text weight="plus">Produto interno criado</Text>
+              <Text>ID: {selected.converted_product_id}</Text>
+              <Text>Preço de venda: ainda não definido</Text>
+              <a
+                className="text-ui-fg-interactive"
+                href={`/app/products/${selected.converted_product_id}`}
+              >
+                ABRIR PRODUTO
+              </a>
+            </div>
+          ) : selected.status === "APPROVED" ? (
+            <div className="mt-4">
+              <Button
+                disabled={convert.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Criar produto interno DRAFT? Esta ação não publica nem compra o produto.",
+                    )
+                  )
+                    convert.mutate();
+                }}
+              >
+                CRIAR PRODUTO INTERNO
+              </Button>
+              <Text className="mt-2 text-ui-fg-subtle">
+                Exige confirmação humana e cria somente estruturas
+                administrativas incompletas.
+              </Text>
+            </div>
+          ) : null}
+          {selected.conversion_failure_reason && (
+            <ErrorState message={selected.conversion_failure_reason} />
+          )}
         </Container>
       )}
     </div>

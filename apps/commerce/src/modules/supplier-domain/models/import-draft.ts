@@ -39,11 +39,24 @@ const ImportDraft = model
     failure_reason: model.text().nullable(),
     created_by: model.text().nullable(),
     last_fetch_at: model.dateTime().nullable(),
+    converted_product_id: model.text().nullable(),
+    conversion_status: model
+      .enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "FAILED"])
+      .default("NOT_STARTED"),
+    conversion_started_at: model.dateTime().nullable(),
+    conversion_completed_at: model.dateTime().nullable(),
+    conversion_failure_reason: model.text().nullable(),
   })
   .indexes([
     { on: ["canonical_source_url"] },
     { on: ["provider", "supplier_product_id"] },
     { on: ["status"] },
+    {
+      name: "IDX_import_draft_converted_product_unique",
+      on: ["converted_product_id"],
+      unique: true,
+      where: "converted_product_id IS NOT NULL AND deleted_at IS NULL",
+    },
   ]);
 
 export default ImportDraft;

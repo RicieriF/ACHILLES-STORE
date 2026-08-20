@@ -18,8 +18,11 @@ export type SupplierOffer = {
   product_id: string;
   supplier_product_id: string;
   source_url: string;
+  canonical_source_url?: string | null;
+  import_draft_id?: string | null;
   currency: string;
   unit_cost: string;
+  unit_cost_max?: string | null;
   moq: number;
   availability: "UNKNOWN" | "IN_STOCK" | "OUT_OF_STOCK";
   branding_moq?: number | null;
@@ -31,6 +34,15 @@ export type SupplierOffer = {
   is_primary: boolean;
   last_sync_at?: string | null;
   supplier?: Supplier;
+  cost_quotes?: CostQuote[];
+};
+export type CostQuote = {
+  id: string;
+  status: "INCOMPLETE" | "READY_FOR_PRICING" | "PRICED" | "STALE";
+  source_currency: string;
+  supplier_unit_cost: string;
+  supplier_unit_cost_max?: string | null;
+  moq: number;
 };
 
 export type BrandingProfile = {
@@ -58,6 +70,13 @@ export type ProductPolicy = {
   sensitivity: "ORDINARY" | "EDGED_TOOL" | "CONTROLLED_ITEM";
   compliance_notes?: string | null;
   updated_at: string;
+  commercial_readiness:
+    | "DATA_INCOMPLETE"
+    | "PRICING_REQUIRED"
+    | "COMPLIANCE_REQUIRED"
+    | "READY_FOR_REVIEW"
+    | "BLOCKED";
+  import_draft_id?: string | null;
 };
 
 export const fulfillmentLabels: Record<string, string> = {
@@ -98,4 +117,7 @@ export type ImportDraft = {
   created_at: string;
   updated_at: string;
   last_fetch_at?: string | null;
+  converted_product_id?: string | null;
+  conversion_status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  conversion_failure_reason?: string | null;
 };

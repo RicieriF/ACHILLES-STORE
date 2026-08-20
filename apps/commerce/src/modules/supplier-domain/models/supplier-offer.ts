@@ -2,6 +2,7 @@ import { model } from "@medusajs/framework/utils";
 import BrandingProfile from "./branding-profile";
 import Supplier from "./supplier";
 import SupplierVariantMap from "./supplier-variant-map";
+import CostQuote from "./cost-quote";
 
 const SupplierOffer = model
   .define("supplier_offer", {
@@ -9,8 +10,11 @@ const SupplierOffer = model
     product_id: model.text(),
     supplier_product_id: model.text(),
     source_url: model.text(),
+    canonical_source_url: model.text().nullable(),
+    import_draft_id: model.text().nullable(),
     currency: model.text(),
     unit_cost: model.text(),
+    unit_cost_max: model.text().nullable(),
     moq: model.number().default(1),
     availability: model
       .enum(["UNKNOWN", "IN_STOCK", "OUT_OF_STOCK"])
@@ -38,10 +42,17 @@ const SupplierOffer = model
     variant_maps: model.hasMany(() => SupplierVariantMap, {
       mappedBy: "supplier_offer",
     }),
+    cost_quotes: model.hasMany(() => CostQuote, { mappedBy: "supplier_offer" }),
   })
   .indexes([
     { on: ["product_id"] },
     { on: ["status"] },
+    {
+      name: "IDX_supplier_offer_import_draft_unique",
+      on: ["import_draft_id"],
+      unique: true,
+      where: "import_draft_id IS NOT NULL AND deleted_at IS NULL",
+    },
     {
       name: "IDX_supplier_offer_external_unique",
       on: ["supplier_id", "supplier_product_id"],

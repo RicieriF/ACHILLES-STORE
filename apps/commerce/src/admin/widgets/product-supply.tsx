@@ -18,12 +18,19 @@ import { EmptyState, ErrorState, LoadingState } from "../components/page-state";
 import { sdk } from "../lib/sdk";
 import {
   fulfillmentLabels,
+  type ImportDraft,
+  type ProductPolicy,
   type Supplier,
   type SupplierOffer,
 } from "../lib/types";
 
 type OfferList = { offers: SupplierOffer[] };
 type SupplierList = { suppliers: Supplier[] };
+type ImportOrigin = {
+  offers: SupplierOffer[];
+  policy: ProductPolicy | null;
+  draft: ImportDraft | null;
+};
 
 const ProductSupplyWidget = ({ data }: DetailWidgetProps<AdminProduct>) => {
   const client = useQueryClient();
@@ -44,6 +51,13 @@ const ProductSupplyWidget = ({ data }: DetailWidgetProps<AdminProduct>) => {
       sdk.client.fetch<SupplierList>("/admin/achilles/suppliers", {
         query: { status: "ACTIVE", limit: 100 },
       }),
+  });
+  const origin = useQuery({
+    queryKey: ["product-import-origin", data.id],
+    queryFn: () =>
+      sdk.client.fetch<ImportOrigin>(
+        `/admin/achilles/products/${data.id}/import-origin`,
+      ),
   });
   const refresh = () =>
     client.invalidateQueries({ queryKey: ["product-supply", data.id] });
@@ -102,6 +116,36 @@ const ProductSupplyWidget = ({ data }: DetailWidgetProps<AdminProduct>) => {
         </Text>
       </div>
       <div className="flex flex-col gap-3 px-6 py-4">
+        {origin.data?.draft && (
+          <div className="rounded border p-3">
+            <Heading level="h3">Origem</Heading>
+            <Text>Alibaba · ImportDraft {origin.data.draft.id}</Text>
+            <Text>
+              Custo fornecedor: {origin.data.draft.source_currency ?? "—"}{" "}
+              {origin.data.draft.source_price_min ?? "não informado"}
+            </Text>
+            <Text>MOQ: {origin.data.draft.moq ?? "não informado"}</Text>
+            <Text>Preço de venda: ainda não definido</Text>
+            <Text>Private Label: não confirmado</Text>
+            <Text>
+              Compliance: {origin.data.policy?.compliance_status ?? "pendente"}
+            </Text>
+            <Text>
+              Preparação comercial:{" "}
+              {origin.data.policy?.commercial_readiness ?? "DATA_INCOMPLETE"}
+            </Text>
+            <Text>
+              CostQuote:{" "}
+              {origin.data.offers[0]?.cost_quotes?.[0]?.status ?? "não criado"}
+            </Text>
+            <a
+              className="text-ui-fg-interactive"
+              href={`/app/achilles-imports`}
+            >
+              Abrir ImportDraft
+            </a>
+          </div>
+        )}
         {offers.isPending ? (
           <LoadingState />
         ) : offers.isError ? (

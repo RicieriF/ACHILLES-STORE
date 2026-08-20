@@ -7,6 +7,7 @@ export const requiredCommerceTables = [
   "import_draft",
   "import_attempt",
   "product_policy",
+  "cost_quote",
 ] as const;
 
 export interface DatabaseProbe {
