@@ -17,9 +17,9 @@ test("public journey reaches a real Medusa cart", async ({ page }) => {
 
   const categoryLink = page
     .getByRole("navigation", { name: "Navegação principal" })
-    .getByRole("link", { name: "Iluminação" });
+    .getByRole("link", { name: "Lanternas" });
   await Promise.all([page.waitForURL(/\/categoria\//), categoryLink.click()]);
-  await expect(page.getByRole("heading", { name: "Iluminação" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lanternas" })).toBeVisible();
   await page.locator("article").first().getByRole("link").first().click();
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
@@ -129,13 +129,100 @@ test("mobile navigation uses the same dynamic category list", async ({
   await page.goto("/");
   await page.getByRole("button", { name: "Abrir menu" }).click();
   const menu = page.getByRole("dialog", { name: "Menu" });
-  await expect(menu.getByRole("link", { name: "Iluminação" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Lanternas" })).toBeVisible();
   await expect(
     menu.getByRole("link", { name: "Mochilas e Bolsas" }),
   ).toHaveCount(0);
   await expect(
     menu.getByRole("link", { name: "Everyday Carry — EDC" }),
   ).toHaveCount(0);
+});
+
+test("TASK 013 exposes curated empty category pages without leaking restricted products", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/categoria/edc");
+  await expect(
+    page.getByRole("heading", { name: "Everyday Carry — EDC" }),
+  ).toBeVisible();
+  await expect(page.getByText("Seleção em preparação")).toBeVisible();
+  await page.goto("/categoria/cutelaria");
+  await expect(page.getByRole("heading", { name: "Cutelaria" })).toBeVisible();
+  await expect(page.getByText("Canivetes")).toBeVisible();
+  await expect(page.locator("article.product-card")).toHaveCount(0);
+  const restricted = await request.get(
+    "http://localhost:9000/achilles/store/products/ficticio-canivete-em-revisao",
+  );
+  expect(restricted.status()).toBe(404);
+});
+
+test("TASK 013 institutional pages and public copy are honest", async ({
+  page,
+}) => {
+  await page.goto("/institucional/privacidade");
+  await expect(
+    page.getByRole("heading", { name: "Privacidade" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Antes do lançamento", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(
+    /CNPJ|Alibaba|SupplierOffer/,
+  );
+});
+
+test("TASK 013 visual evidence at desktop and mobile breakpoints", async ({
+  page,
+}) => {
+  mkdirSync("artifacts/task-013", { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await page.screenshot({
+    path: "artifacts/task-013/01-home-desktop.png",
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: "artifacts/task-013/02-hero-header-desktop.png",
+  });
+  await page.goto("/categoria/lanternas");
+  await page.screenshot({
+    path: "artifacts/task-013/03-lanternas-desktop.png",
+    fullPage: true,
+  });
+  await page.locator("article").first().getByRole("link").first().click();
+  await page.screenshot({
+    path: "artifacts/task-013/04-product-desktop.png",
+    fullPage: true,
+  });
+  await page.goto("/categoria/edc");
+  await page.screenshot({
+    path: "artifacts/task-013/05-edc-empty.png",
+    fullPage: true,
+  });
+  await page.goto("/categoria/cutelaria");
+  await page.screenshot({
+    path: "artifacts/task-013/06-cutelaria-compliance.png",
+    fullPage: true,
+  });
+  await page.goto("/buscar?q=lanterna");
+  await page.screenshot({
+    path: "artifacts/task-013/07-search-desktop.png",
+    fullPage: true,
+  });
+  await page.goto("/institucional/sobre");
+  await page.screenshot({
+    path: "artifacts/task-013/08-sobre-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.screenshot({
+    path: "artifacts/task-013/09-home-mobile.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Abrir menu" }).click();
+  await page.screenshot({ path: "artifacts/task-013/10-menu-mobile.png" });
 });
 
 test("official brand assets adapt between desktop and mobile", async ({

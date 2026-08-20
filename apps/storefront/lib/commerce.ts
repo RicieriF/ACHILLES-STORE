@@ -4,6 +4,11 @@ import type {
   PublicProductDTO,
   PublicShippingQuoteDTO,
 } from "@achilles/domain";
+import {
+  canonicalCategoryHandle,
+  presentProduct,
+  publicMenuCategories,
+} from "./catalog-taxonomy";
 
 const commerceUrl = (
   process.env.NEXT_PUBLIC_COMMERCE_URL ?? "http://localhost:9000"
@@ -22,10 +27,21 @@ export async function getPublicCatalog(input?: {
 }): Promise<PublicCatalogDTO> {
   const parameters = new URLSearchParams();
   if (input?.query) parameters.set("q", input.query);
-  if (input?.category) parameters.set("category", input.category);
-  return commerceFetch<PublicCatalogDTO>(
+  const catalog = await commerceFetch<PublicCatalogDTO>(
     `/achilles/store/catalog${parameters.size ? `?${parameters}` : ""}`,
   );
+  const products = catalog.products.map(presentProduct);
+  const category = input?.category
+    ? canonicalCategoryHandle(input.category)
+    : null;
+  return {
+    categories: publicMenuCategories(catalog.categories),
+    products: category
+      ? products.filter((product) =>
+          product.categories.some((item) => item.handle === category),
+        )
+      : products,
+  };
 }
 
 export async function getPublicProduct(
@@ -41,7 +57,7 @@ export async function getPublicProduct(
   const payload: unknown = await response.json();
   if (!isObject(payload) || !isPublicProduct(payload.product))
     throw new StorefrontDataError("Resposta pública de produto inválida");
-  return payload.product;
+  return presentProduct(payload.product);
 }
 
 export async function commerceCartRequest(

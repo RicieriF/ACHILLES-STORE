@@ -12,19 +12,19 @@ export const metadata: Metadata = {
     template: "%s | Achilles Store",
   },
   description:
-    "Equipamentos outdoor, EDC, camping e iluminação selecionados para jornadas reais.",
+    "Lanternas, EDC, cutelaria e equipamentos outdoor selecionados para jornadas reais.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://achilles.example.invalid",
   ),
   openGraph: {
     title: "Achilles Store — Outdoor, EDC e equipamentos",
     description:
-      "Equipamentos premium para outdoor, EDC, camping e iluminação.",
+      "Lanternas, EDC, cutelaria e equipamentos outdoor com curadoria responsável.",
     type: "website",
     locale: "pt_BR",
     images: [
       {
-        url: "/brand/achilles-store-og.svg",
+        url: "/images/achilles-field-hero-v2.png",
         width: 1200,
         height: 630,
         alt: "Achilles Store — equipamentos para ir mais longe",

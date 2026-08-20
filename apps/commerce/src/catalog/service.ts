@@ -67,6 +67,7 @@ type InternalOffer = {
   product_id: string;
   status: string;
   is_primary: boolean;
+  fulfillment_mode?: string | null;
   cost_quotes?: InternalQuote[];
 };
 
@@ -173,7 +174,13 @@ export class PublicCatalogService {
     return source.products.flatMap((product) => {
       const decision = this.evaluateProduct(product, source);
       return decision.eligible
-        ? [toPublicProduct(product, decision.approvedPrice)]
+        ? [
+            toPublicProduct(
+              product,
+              decision.approvedPrice,
+              source.offerByProduct.get(product.id),
+            ),
+          ]
         : [];
     });
   }
@@ -316,6 +323,7 @@ type CatalogSource = {
 function toPublicProduct(
   product: InternalProduct,
   approvedPrice: number,
+  offer?: InternalOffer,
 ): PublicProductDTO {
   const price = money(approvedPrice);
   const categories = publicCategories(product).map((category) => ({
@@ -364,6 +372,12 @@ function toPublicProduct(
     newArrival:
       product.metadata?.achilles_new_arrival === true ||
       Date.now() - new Date(createdAt).getTime() < 1000 * 60 * 60 * 24 * 45,
+    shippingOrigin:
+      offer?.fulfillment_mode === "BRAZIL_STOCK"
+        ? "BRAZIL"
+        : offer?.fulfillment_mode
+          ? "INTERNATIONAL"
+          : null,
     createdAt,
     updatedAt: new Date(product.updated_at).toISOString(),
   };
