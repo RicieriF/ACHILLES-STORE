@@ -6,6 +6,7 @@
     "build": "medusa build",
     "dev": "medusa develop",
     "start": "medusa start",
+    "start:e2e": "medusa build && medusa start",
     "db:migrate": "medusa db:migrate",
     "db:generate": "medusa db:generate supplier_domain",
     "seed": "medusa exec ./src/scripts/seed.ts",

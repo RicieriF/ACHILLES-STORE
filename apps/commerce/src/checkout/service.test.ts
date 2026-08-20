@@ -17,6 +17,7 @@ describe("snapshots públicos do checkout", () => {
     expect(totals.products.amount).toBe(298);
     expect(totals.shipping.amount).toBe(40);
     expect(totals.discounts.amount).toBe(0);
+    expect(totals.fulfillmentTaxMode).toBe("UNKNOWN");
     expect(totals.taxes).toEqual({
       known: false,
       amount: null,
