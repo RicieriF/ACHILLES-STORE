@@ -1,4 +1,4 @@
-# Arquitetura até a TASK 003
+# Arquitetura até a TASK 004
 
 O projeto é um monorepo pnpm/Turborepo. `apps/storefront` é o canal Next.js em pt-BR. `apps/commerce` é o Medusa v2 com Admin. Contratos independentes ficam em `packages/domain`, validação de ambiente em `packages/config` e fornecedores atrás de `SupplierConnector`.
 
@@ -15,6 +15,9 @@ O módulo `supplier_domain` persiste apenas conceitos próprios:
 - `BrandingProfile`: instruções e custos de private label como strings decimais.
 - `ProductPolicy`: fulfillment mode, sensibilidade e compliance do produto.
 - `AuditEvent`: trilha extensível de ações administrativas sem segredos.
+- `ImportDraft`: preserva dados brutos e sugestões normalizadas sem criar Product.
+- `ImportAttempt`: snapshot essencial e limitado de cada tentativa, com método,
+  resultado, erro e versões do parser/normalizador.
 
 Links somente de leitura expõem `SupplierOffer -> Product` e `ProductPolicy -> Product`. URL, título, descrição e variantes públicas continuam pertencendo ao Product nativo e não mudam quando o fornecedor é substituído.
 
@@ -40,6 +43,30 @@ As customizações usam UI routes nativas do Medusa, um widget em
 `supplier_domain` permanece como fonte única de suppliers, offers, branding,
 políticas e auditoria. Trocar a oferta principal nunca altera nem remove Product.
 
+## Importador Alibaba seguro
+
+O Admin e suas rotas dependem de `SupplierConnector`; somente
+`AlibabaConnector` conhece a fonte Alibaba. O fluxo termina em `ImportDraft
+APPROVED`: isso significa apenas dados revisados para a próxima etapa. Nenhum
+Product, SupplierOffer, pedido ou pagamento é criado.
+
+`ALIBABA_PRODUCT_IMPORT=false` é o padrão. Nesse modo a URL HTTPS é validada e
+um draft manual `NEEDS_REVIEW` é persistido sem chamada externa. Quando a flag
+é deliberadamente ativada, o conector usa somente página pública e JSON-LD
+limitado; não contorna login, CAPTCHA, rate limit ou anti-bot. Ausência de dados
+gera alertas e edição humana, nunca conteúdo inventado.
+
+A barreira SSRF aceita apenas `https://www.alibaba.com`, rejeita IP, localhost,
+DNS privado e redirect fora da allowlist. Coleta possui timeout, limite de
+resposta, retry transitório limitado e redirect manual. Lock/cooldown local por
+URL impede concorrência; poderá ser substituído por backend distribuído.
+
+Normalização determinística mantém `raw → normalized`, padroniza whitespace,
+moeda, decimal, MOQ, especificações e variantes. A triagem preliminar marca
+lâminas como `REVIEW_REQUIRED` e itens controlados como `BLOCKED`; não é parecer
+jurídico. Draft bloqueado não pode ser aprovado. A deduplicação reutiliza draft
+ativo pela URL canônica e preserva o histórico de tentativas.
+
 O `.env` da raiz é localizado pelo marcador do workspace. Apps não mantêm
 cópias locais de segredos. Fake Redis, Local Event Bus e locking em memória são
 somente opções de desenvolvimento; produção deverá usar implementações duráveis.
@@ -47,6 +74,9 @@ somente opções de desenvolvimento; produção deverá usar implementações du
 ## Limites
 
 - Não há integração ou simulação de sucesso Alibaba.
+- A coleta pública é conservadora e pode terminar incompleta; o fallback manual
+  é o caminho suportado.
+- O rate limiting desta etapa é local ao processo, não distribuído.
 - Não há compra/pagamento de fornecedor, Mercado Pago ou cálculo fiscal.
 - O catálogo existente é exclusivamente fictício e de desenvolvimento.
 - Logística de checkout e inventário em localização física serão configurados em tarefa posterior.

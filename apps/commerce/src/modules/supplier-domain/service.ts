@@ -6,6 +6,8 @@ import {
   Supplier,
   SupplierOffer,
   SupplierVariantMap,
+  ImportDraft,
+  ImportAttempt,
 } from "./models";
 
 class SupplierDomainModuleService extends MedusaService({
@@ -15,6 +17,8 @@ class SupplierDomainModuleService extends MedusaService({
   BrandingProfile,
   ProductPolicy,
   AuditEvent,
+  ImportDraft,
+  ImportAttempt,
 }) {}
 
 export default SupplierDomainModuleService;

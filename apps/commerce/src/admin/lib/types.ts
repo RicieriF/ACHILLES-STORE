@@ -65,3 +65,37 @@ export const fulfillmentLabels: Record<string, string> = {
   GENERIC_DROPSHIP: "Dropshipping Genérico",
   BRAZIL_STOCK: "Estoque Brasil",
 };
+export type ImportDraft = {
+  id: string;
+  provider: string;
+  source_url: string;
+  canonical_source_url: string;
+  supplier_product_id?: string | null;
+  status:
+    "FETCHING" | "PARSED" | "NEEDS_REVIEW" | "APPROVED" | "REJECTED" | "FAILED";
+  title_raw?: string | null;
+  title_normalized?: string | null;
+  description_raw?: string | null;
+  description_normalized?: string | null;
+  source_currency?: string | null;
+  source_price_min?: string | null;
+  source_price_max?: string | null;
+  moq?: number | null;
+  category_raw?: string | null;
+  category_suggested?: string | null;
+  media: { items: string[] };
+  specifications: Record<string, string>;
+  variants: {
+    items: Array<{
+      supplierSku: string;
+      title: string;
+      attributes: Record<string, string>;
+    }>;
+  };
+  compliance_status: "CLEAR" | "REVIEW_REQUIRED" | "BLOCKED";
+  alerts: { items: string[] };
+  failure_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+  last_fetch_at?: string | null;
+};

@@ -1,6 +1,6 @@
 # ACHILLES STORE
 
-Commerce core modular do e-commerce outdoor brasileiro. A implementação atual cobre até a TASK 003 — Admin de Fornecedores, Private Label e Compliance.
+Commerce core modular do e-commerce outdoor brasileiro. A implementação atual cobre até a TASK 004 — Alibaba URL para ImportDraft revisável.
 
 ## Requisitos
 
@@ -40,11 +40,16 @@ O seed é idempotente para canal, região, categorias e produtos, recusa `NODE_E
 ## Administração ACHILLES STORE
 
 Abra `http://localhost:9000/app`. As extensões incluem fornecedores, produtos e
-fornecedores, private label, compliance e a página informativa Importações. As
+fornecedores, private label, compliance e Importações. As
 APIs próprias ficam sob `/admin/achilles` e exigem autenticação Medusa.
 
-Importações não possui integração funcional. Todas as capacidades Alibaba
-continuam desativadas.
+Com `ALIBABA_PRODUCT_IMPORT=false` (padrão), Importações valida uma URL HTTPS
+Alibaba e cria um draft manual sem chamada externa. Ativar deliberadamente a
+flag permite somente coleta pública conservadora; credenciais oficiais não são
+exigidas. `APPROVED` não cria Product nem SupplierOffer.
+
+Endpoints: `POST/GET /admin/achilles/imports`, `GET/PATCH
+/admin/achilles/imports/:id` e ações `reprocess`, `approve` e `reject`.
 
 ## Quality gates
 
@@ -63,7 +68,10 @@ Testes persistentes exigem PostgreSQL. A CI inicia PostgreSQL 17, executa `pnpm 
 
 ## Segurança e limitações
 
-Todas as flags Alibaba permanecem `false`. Não existem chamadas/scraping Alibaba, pedido ou pagamento de fornecedor, Mercado Pago, checkout brasileiro completo, Pricing Engine ou regras fiscais inventadas. O seed não configura logística de checkout.
+Todas as flags Alibaba permanecem `false` por padrão. Não existem pedido ou
+pagamento de fornecedor, Mercado Pago, checkout brasileiro completo, Pricing
+Engine ou regras fiscais inventadas. A coleta opcional não contorna CAPTCHA,
+login, rate limit ou proteção anti-bot. O seed não configura logística de checkout.
 
 Fake Redis, Local Event Bus e locking em memória são aceitáveis somente no
 desenvolvimento. Produção exigirá componentes duráveis. O aviso transitivo do

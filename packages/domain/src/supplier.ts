@@ -3,6 +3,38 @@ export interface SupplierProductRef {
   supplierProductId: string;
   sourceUrl: string;
 }
+export type ImportCompliance = "CLEAR" | "REVIEW_REQUIRED" | "BLOCKED";
+export interface SupplierProductSource {
+  reference: SupplierProductRef;
+  title?: string | undefined;
+  description?: string | undefined;
+  currency?: string | undefined;
+  priceMin?: string | undefined;
+  priceMax?: string | undefined;
+  moq?: number | undefined;
+  category?: string | undefined;
+  media: readonly string[];
+  specifications: Readonly<Record<string, string>>;
+  variants: readonly SupplierVariant[];
+  metadata: Readonly<Record<string, string | number | boolean | null>>;
+  obtainedAt: string;
+  method: "OFFICIAL_API" | "PUBLIC_PAGE" | "MANUAL";
+}
+export interface NormalizedSupplierProduct {
+  source: SupplierProductSource;
+  title?: string | undefined;
+  description?: string | undefined;
+  currency?: string | undefined;
+  priceMin?: string | undefined;
+  priceMax?: string | undefined;
+  moq?: number | undefined;
+  categorySuggested?: string | undefined;
+  specifications: Readonly<Record<string, string>>;
+  variants: readonly SupplierVariant[];
+  compliance: ImportCompliance;
+  alerts: readonly string[];
+  normalizerVersion: string;
+}
 export interface SupplierVariant {
   supplierSku: string;
   title: string;
@@ -59,7 +91,10 @@ export interface SupplierCapabilities {
 export interface SupplierConnector {
   readonly provider: string;
   readonly capabilities: SupplierCapabilities;
+  resolveProductUrl(sourceUrl: string): Promise<SupplierProductRef>;
   getProduct(reference: SupplierProductRef): Promise<SupplierProductRef>;
+  collectProduct(reference: SupplierProductRef): Promise<SupplierProductSource>;
+  normalizeProduct(source: SupplierProductSource): NormalizedSupplierProduct;
   getVariants(
     reference: SupplierProductRef,
   ): Promise<readonly SupplierVariant[]>;

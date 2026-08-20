@@ -4,6 +4,8 @@ export const requiredCommerceTables = [
   "supplier_variant_map",
   "branding_profile",
   "audit_event",
+  "import_draft",
+  "import_attempt",
   "product_policy",
 ] as const;
 
