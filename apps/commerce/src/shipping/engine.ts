@@ -100,6 +100,17 @@ export type ShippingEngineResult = {
   candidates: readonly ShippingRoutingCandidate[];
 };
 
+export type CheckoutShippingQuoteResult = {
+  groups: Array<{
+    id: string;
+    label: string;
+    itemLabels: string[];
+    methods: PublicShippingMethodDTO[];
+    selectedMethodId: null;
+  }>;
+  shipmentType: "SINGLE" | "MULTI_SHIPMENT";
+};
+
 const providerCache = new ShortTtlCache<readonly ProviderShippingQuote[]>(
   60_000,
 );
@@ -124,6 +135,8 @@ export class ShippingQuoteEngine {
     quantity: number;
     postalCode: string;
     cartId?: string | undefined;
+    state?: string | undefined;
+    city?: string | undefined;
   }): Promise<ShippingEngineResult> {
     const postalCode = normalizeBrazilPostalCode(input.postalCode);
     const product = await this.catalog.getProductByVariantId(input.variantId);
@@ -173,7 +186,12 @@ export class ShippingQuoteEngine {
         supplierSku: variantMap.supplier_sku,
         quantity: input.quantity,
         originCountryCode: offer.supplier.country_code,
-        destination: { countryCode: "BR", postalCode },
+        destination: {
+          countryCode: "BR",
+          postalCode,
+          state: input.state,
+          city: input.city,
+        },
       };
       const provider = this.providerForOffer(offer);
       const quotes = await this.obtainQuotes(provider, request, offer).catch(
@@ -203,8 +221,8 @@ export class ShippingQuoteEngine {
           supplier_offer_id: offer.id,
           provider: quote.provider,
           destination_country: "BR",
-          destination_state: null,
-          destination_city: null,
+          destination_state: input.state ?? null,
+          destination_city: input.city ?? null,
           postal_code: postalCode,
           quantity: input.quantity,
           provider_service_code: quote.serviceCode,
@@ -330,6 +348,8 @@ export class ShippingQuoteEngine {
   async quoteCart(input: {
     cartId: string;
     postalCode: string;
+    state?: string | undefined;
+    city?: string | undefined;
   }): Promise<ShippingEngineResult> {
     const cart = await new PublicCartService(this.container).retrieve(
       input.cartId,
@@ -359,6 +379,8 @@ export class ShippingQuoteEngine {
             quantity: item.quantity,
             postalCode: input.postalCode,
             cartId: cart.id,
+            state: input.state,
+            city: input.city,
           }),
         ),
       );
@@ -412,7 +434,48 @@ export class ShippingQuoteEngine {
       quantity: item.quantity,
       postalCode: input.postalCode,
       cartId: cart.id,
+      state: input.state,
+      city: input.city,
     });
+  }
+
+  async quoteCheckoutCart(input: {
+    cartId: string;
+    postalCode: string;
+    state: string;
+    city: string;
+  }): Promise<CheckoutShippingQuoteResult> {
+    const cart = await new PublicCartService(this.container).retrieve(
+      input.cartId,
+    );
+    if (cart.items.length === 0)
+      throw new ShippingQuoteEngineError("EMPTY_CART", "Carrinho vazio");
+    const results = await Promise.all(
+      cart.items.map((item) =>
+        this.quoteProduct({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          postalCode: input.postalCode,
+          state: input.state,
+          city: input.city,
+          cartId: cart.id,
+        }),
+      ),
+    );
+    const groups = results.map((result, index) => {
+      const cartItem = cart.items[index];
+      return {
+        id: `group-${String(index + 1)}`,
+        label: `Pacote ${String(index + 1)}`,
+        itemLabels: [cartItem?.productTitle ?? "Produto"],
+        methods: [...result.publicQuote.methods],
+        selectedMethodId: null,
+      };
+    });
+    return {
+      groups,
+      shipmentType: groups.length > 1 ? "MULTI_SHIPMENT" : "SINGLE",
+    };
   }
 
   private providerForOffer(offer: OfferRecord): ShippingQuoteProvider {
@@ -444,6 +507,8 @@ export class ShippingQuoteEngine {
       request.variantId,
       request.quantity,
       request.destination.postalCode,
+      request.destination.state ?? "",
+      request.destination.city ?? "",
     ].join(":");
     const cached = providerCache.get(key);
     if (cached) return cached;

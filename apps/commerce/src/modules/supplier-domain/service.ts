@@ -12,6 +12,8 @@ import {
   PricingSnapshot,
   ShippingQuote,
   SupplierRoutingDecision,
+  CheckoutSession,
+  CheckoutShippingSelection,
 } from "./models";
 
 class SupplierDomainModuleService extends MedusaService({
@@ -27,6 +29,8 @@ class SupplierDomainModuleService extends MedusaService({
   PricingSnapshot,
   ShippingQuote,
   SupplierRoutingDecision,
+  CheckoutSession,
+  CheckoutShippingSelection,
 }) {}
 
 export default SupplierDomainModuleService;

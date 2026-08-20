@@ -9,6 +9,9 @@ export const requiredCommerceTables = [
   "product_policy",
   "cost_quote",
   "pricing_snapshot",
+  "shipping_quote",
+  "checkout_session",
+  "checkout_shipping_selection",
 ] as const;
 
 export interface DatabaseProbe {

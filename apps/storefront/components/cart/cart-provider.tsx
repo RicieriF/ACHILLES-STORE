@@ -24,6 +24,7 @@ type CartContextValue = {
   loading: boolean;
   error: string | null;
   openCart: () => void;
+  closeCart: () => void;
   addItem: (variantId: string, quantity: number) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
@@ -84,6 +85,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       openCart: () => {
         setDrawerOpen(true);
       },
+      closeCart: () => {
+        setDrawerOpen(false);
+      },
       addItem: async (variantId, quantity) => {
         await run(async () => {
           const current = await ensureCart();
@@ -141,7 +145,7 @@ export function useCart(): CartContextValue {
 }
 
 function CartContents({ value }: { value: CartContextValue }) {
-  const { cart, loading, error, updateItem, removeItem } = value;
+  const { cart, loading, error, updateItem, removeItem, closeCart } = value;
   if (!cart || cart.items.length === 0)
     return (
       <div className="cart-empty">
@@ -230,9 +234,13 @@ function CartContents({ value }: { value: CartContextValue }) {
         <span>Subtotal</span>
         <strong>{cart.subtotal.formatted}</strong>
         <small>Frete e prazo serão calculados na próxima etapa.</small>
-        <button className="button button--primary" disabled>
-          Entrega na próxima etapa
-        </button>
+        <Link
+          className="button button--primary"
+          href="/checkout"
+          onClick={closeCart}
+        >
+          Ir para o checkout
+        </Link>
       </div>
     </div>
   );
