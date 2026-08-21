@@ -13,29 +13,8 @@ type CleanupDatabase = {
 type CleanupCount = { entity: string; count: number };
 
 const allowedEnvironments = new Set(["development", "test", "staging"]);
-const fixtureEmails = [
-  "cliente@example.com",
-  "maria@example.com",
-  "sandbox@example.com",
-] as const;
-const demoProductHandles = [
-  "ficticio-lanterna-desenvolvimento",
-  "ficticio-mochila-desenvolvimento",
-  "ficticio-canivete-em-revisao",
-  "fictício-lanterna-recarregável-para-revisão",
-] as const;
-const obsoleteDemoCategoryHandles = [
-  "camping",
-  "pesca",
-  "mochilas-e-bolsas",
-  "outdoor-e-aventura",
-  "iluminação",
-  "everyday-carry-—-edc",
-  "camping-&-outdoor",
-] as const;
 
-export default async function cleanTestData({ container }: ExecArgs) {
-  const environment = process.env.APP_ENV ?? "development";
+export function assertCleanupEnvironment(environment: string): void {
   if (environment === "production")
     throw new Error("TEST_DATA_CLEANUP_FORBIDDEN_IN_PRODUCTION");
   if (!allowedEnvironments.has(environment))
@@ -43,11 +22,15 @@ export default async function cleanTestData({ container }: ExecArgs) {
   if (
     environment === "staging" &&
     process.env.ALLOW_STAGING_TEST_DATA_CLEANUP !== "true"
-  ) {
+  )
     throw new Error(
       "STAGING_TEST_DATA_CLEANUP_REQUIRES_EXPLICIT_AUTHORIZATION",
     );
-  }
+}
+
+export default async function cleanTestData({ container }: ExecArgs) {
+  const environment = process.env.APP_ENV ?? "development";
+  assertCleanupEnvironment(environment);
 
   const dryRun = process.env.CLEAN_TEST_DATA_DRY_RUN === "true";
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
@@ -86,34 +69,19 @@ export default async function cleanTestData({ container }: ExecArgs) {
 }
 
 async function createTargets(database: CleanupDatabase): Promise<void> {
-  await database.raw(
-    `create temporary table cleanup_products on commit drop as
-      select id from product where (
-        metadata->>'seed' = any (?::text[]) or handle = any (?::text[])
-        or metadata->>'achilles_test_fixture' = 'true'
-      )`,
-    [
-      ["TASK_002_DEVELOPMENT_ONLY", "TASK_013_DEVELOPMENT_ONLY"],
-      demoProductHandles,
-    ],
-  );
   await database.raw(`create temporary table cleanup_payments on commit drop as
     select id, checkout_session_id, taxpayer_identity_id from payment_intent
     where deleted_at is null and provider = 'TEST'`);
   await database.raw(
     `create temporary table cleanup_checkouts on commit drop as
-      select distinct id, cart_id from checkout_session
-      where deleted_at is null and (
-        id in (select checkout_session_id from cleanup_payments)
-        or lower(email) = any (?::text[])
-        or exists (
-          select 1 from cart_line_item
-          where cart_line_item.cart_id = checkout_session.cart_id
-            and cart_line_item.deleted_at is null
-            and cart_line_item.product_id in (select id from cleanup_products)
+    select distinct id, cart_id from checkout_session
+    where deleted_at is null and (
+      id in (select checkout_session_id from cleanup_payments)
+        or cart_id in (
+          select id from cart where deleted_at is null
+            and metadata->>'achilles_test_fixture' = 'true'
         )
       )`,
-    [fixtureEmails],
   );
   await database.raw(`create temporary table cleanup_customer_orders on commit drop as
     select id, medusa_order_id from customer_order
@@ -121,24 +89,60 @@ async function createTargets(database: CleanupDatabase): Promise<void> {
       payment_intent_id in (select id from cleanup_payments)
       or checkout_session_id in (select id from cleanup_checkouts)
     )`);
+  await database.raw(
+    `create temporary table cleanup_products on commit drop as
+      select distinct product.id from product
+      left join product_variant on product_variant.product_id = product.id
+        and product_variant.deleted_at is null
+      where product.deleted_at is null and (
+        product.metadata->>'seed' = any (?::text[])
+        or product.metadata->>'achilles_test_fixture' = 'true'
+        or product.metadata->>'supplier_product_id' like 'CJ-FIXTURE-%'
+        or (
+          product.status = 'draft' and (
+            product_variant.sku ~ '^ACH-CAND-(00[1-9]|01[0-5])$'
+            or upper(product.title) = 'TESTE'
+          )
+        )
+      ) and not exists (
+        select 1 from order_line_item
+        join order_item on order_item.id = order_line_item.totals_id
+        where order_line_item.product_id = product.id
+          and order_line_item.deleted_at is null
+          and order_item.deleted_at is null
+          and order_item.order_id not in (
+            select medusa_order_id from cleanup_customer_orders
+          )
+      )`,
+    [["TASK_002_DEVELOPMENT_ONLY", "TASK_013_DEVELOPMENT_ONLY"]],
+  );
+  await database.raw(`insert into cleanup_checkouts (id, cart_id)
+    select distinct checkout_session.id, checkout_session.cart_id
+    from checkout_session
+    join cart_line_item on cart_line_item.cart_id = checkout_session.cart_id
+      and cart_line_item.deleted_at is null
+    where checkout_session.deleted_at is null
+      and cart_line_item.product_id in (select id from cleanup_products)
+    on conflict do nothing`);
   await database.raw(`create temporary table cleanup_supplier_orders on commit drop as
     select id from supplier_order
     where deleted_at is null and (sandbox = true or provider = 'TEST'
       or customer_order_id in (select id from cleanup_customer_orders))`);
-  await database.raw(`create temporary table cleanup_suppliers on commit drop as
-    select distinct supplier.id from supplier
-    left join supplier_offer on supplier_offer.supplier_id = supplier.id and supplier_offer.deleted_at is null
-    where supplier.deleted_at is null and (
-      supplier.metadata->>'seed' = 'TASK_003_DEVELOPMENT_ONLY'
-      or supplier.name in ('[FICTÍCIO] Validação UI TASK 003', '[PENDENTE] Fornecedor Alibaba não identificado')
-      or supplier_offer.product_id in (select id from cleanup_products)
-    )`);
   await database.raw(`create temporary table cleanup_offers on commit drop as
     select id from supplier_offer where deleted_at is null and (
       product_id in (select id from cleanup_products)
-      or supplier_id in (select id from cleanup_suppliers)
       or source_url like 'https://example.invalid/%'
     )`);
+  await database.raw(`create temporary table cleanup_suppliers on commit drop as
+    select supplier.id from supplier
+    where supplier.deleted_at is null
+      and supplier.metadata->>'seed' = 'TASK_003_DEVELOPMENT_ONLY'
+      and not exists (
+        select 1 from supplier_offer retained_offer
+        where retained_offer.supplier_id = supplier.id
+          and retained_offer.deleted_at is null
+          and retained_offer.id not in (select id from cleanup_offers)
+      )`);
   await database.raw(`create temporary table cleanup_plans on commit drop as
     select id from supplier_fulfillment_plan where deleted_at is null
       and customer_order_id in (select id from cleanup_customer_orders)`);
@@ -152,6 +156,25 @@ async function createTargets(database: CleanupDatabase): Promise<void> {
       where other.taxpayer_identity_id = cleanup_payments.taxpayer_identity_id
         and other.deleted_at is null and other.provider <> 'TEST'
     )`);
+  await database.raw(`create temporary table cleanup_customers on commit drop as
+    select customer.id from customer
+    where customer.deleted_at is null and customer.has_account = false
+      and exists (
+        select 1 from "order" fixture_order
+        where fixture_order.customer_id = customer.id
+          and fixture_order.deleted_at is null
+          and fixture_order.id in (
+            select medusa_order_id from cleanup_customer_orders
+          )
+      )
+      and not exists (
+        select 1 from "order" retained_order
+        where retained_order.customer_id = customer.id
+          and retained_order.deleted_at is null
+          and retained_order.id not in (
+            select medusa_order_id from cleanup_customer_orders
+          )
+      )`);
 }
 
 const countQueries: ReadonlyArray<readonly [string, string]> = [
@@ -193,16 +216,16 @@ const countQueries: ReadonlyArray<readonly [string, string]> = [
     "OrderExceptions teste",
     "select count(*)::int count from order_exception where deleted_at is null and customer_order_id in (select id from cleanup_customer_orders)",
   ],
-  ["Fornecedores demo", "select count(*)::int count from cleanup_suppliers"],
   [
     "SupplierOffers fictícias",
     "select count(*)::int count from cleanup_offers",
   ],
-  ["Produtos demo", "select count(*)::int count from cleanup_products"],
+  ["Fornecedores seed", "select count(*)::int count from cleanup_suppliers"],
   [
-    "Categorias demo obsoletas",
-    "select count(*)::int count from product_category where deleted_at is null and handle = any (?::text[])",
+    "Customers exclusivamente TEST",
+    "select count(*)::int count from cleanup_customers",
   ],
+  ["Produtos demo", "select count(*)::int count from cleanup_products"],
 ];
 
 async function countTargets(
@@ -210,10 +233,7 @@ async function countTargets(
 ): Promise<CleanupCount[]> {
   const counts: CleanupCount[] = [];
   for (const [entity, sql] of countQueries) {
-    const result = await database.raw<{ count: number }>(
-      sql,
-      sql.includes("?::text[]") ? [obsoleteDemoCategoryHandles] : [],
-    );
+    const result = await database.raw<{ count: number }>(sql);
     counts.push({ entity, count: result.rows[0]?.count ?? 0 });
   }
   return counts;
@@ -270,6 +290,12 @@ async function softDeleteTargets(database: CleanupDatabase): Promise<void> {
       sql: 'update "order" set deleted_at = now(), updated_at = now() where deleted_at is null and id in (select medusa_order_id from cleanup_customer_orders)',
     },
     {
+      sql: "update customer_address set deleted_at = now(), updated_at = now() where deleted_at is null and customer_id in (select id from cleanup_customers)",
+    },
+    {
+      sql: "update customer set deleted_at = now(), updated_at = now() where deleted_at is null and id in (select id from cleanup_customers)",
+    },
+    {
       sql: "update cart set deleted_at = now(), updated_at = now() where deleted_at is null and id in (select cart_id from cleanup_checkouts)",
     },
     {
@@ -304,10 +330,6 @@ async function softDeleteTargets(database: CleanupDatabase): Promise<void> {
     },
     {
       sql: "update product set deleted_at = now(), updated_at = now() where deleted_at is null and id in (select id from cleanup_products)",
-    },
-    {
-      sql: "update product_category set deleted_at = now(), updated_at = now() where deleted_at is null and handle = any (?::text[])",
-      bindings: [obsoleteDemoCategoryHandles],
     },
   ];
   for (const statement of statements)

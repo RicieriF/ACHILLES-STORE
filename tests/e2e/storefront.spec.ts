@@ -559,7 +559,7 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
   await adminLogin(page, auth);
   await page.goto("http://localhost:9000/app/achilles-orders");
   await expect(
-    page.getByRole("heading", { name: "ACHILLES · Pedidos" }),
+    page.getByRole("heading", { level: 1, name: "Pedidos", exact: true }),
   ).toBeVisible({ timeout: 20_000 });
   await page.getByText(paid.reference).click();
   await expect(

@@ -1054,7 +1054,7 @@ const CatalogPage = () => {
       <Container>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <Heading level="h1">Catálogo Comercial</Heading>
+            <Heading level="h1">Produtos</Heading>
             <Text className="text-ui-fg-subtle">
               Produtos próprios da loja e suas fontes de fornecimento, sem
               depender da listagem externa.
@@ -1367,5 +1367,5 @@ const CatalogPage = () => {
   );
 };
 
-export const config = defineRouteConfig({ label: "PRODUTOS" });
+export const config = defineRouteConfig({ label: "PRODUTOS", rank: 20 });
 export default CatalogPage;

@@ -189,7 +189,5 @@ const AlibabaCatalogPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({
-  label: "ACHILLES · Alibaba Catálogo",
-});
+export const config = defineRouteConfig({});
 export default AlibabaCatalogPage;
