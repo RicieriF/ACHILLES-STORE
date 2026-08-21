@@ -35,7 +35,9 @@ export async function getPublicCatalog(input?: {
     ? canonicalCategoryHandle(input.category)
     : null;
   return {
-    categories: publicMenuCategories(catalog.categories),
+    categories: publicMenuCategories(catalog.categories, {
+      includeEmptyStructural: process.env.APP_ENV !== "production",
+    }),
     products: category
       ? products.filter((product) =>
           product.categories.some((item) => item.handle === category),

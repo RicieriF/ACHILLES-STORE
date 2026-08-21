@@ -2,7 +2,6 @@ import type { PublicCategoryDTO } from "@achilles/domain";
 import Link from "next/link";
 import { Container } from "../ui/primitives";
 import { BrandLogo } from "./brand-logo";
-import { publicMenuCategories } from "../../lib/catalog-taxonomy";
 
 const groups = [
   [
@@ -58,13 +57,11 @@ export const SiteFooter = ({
           {categories.length === 0 ? (
             <span>Curadoria em preparação</span>
           ) : (
-            publicMenuCategories(categories)
-              .slice(0, 5)
-              .map((category) => (
-                <Link key={category.id} href={`/categoria/${category.handle}`}>
-                  {category.title}
-                </Link>
-              ))
+            categories.slice(0, 5).map((category) => (
+              <Link key={category.id} href={`/categoria/${category.handle}`}>
+                {category.title}
+              </Link>
+            ))
           )}
         </div>
         <div>

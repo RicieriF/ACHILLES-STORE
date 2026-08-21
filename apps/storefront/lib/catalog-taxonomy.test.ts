@@ -12,7 +12,7 @@ describe("catalog taxonomy", () => {
     expect(taxonomyItem("lanternas")?.title).toBe("Lanternas");
   });
 
-  it("keeps empty categories out of public navigation", () => {
+  it("keeps empty categories out of production navigation", () => {
     const result = publicMenuCategories([
       {
         id: "1",
@@ -32,5 +32,17 @@ describe("catalog taxonomy", () => {
       },
     ]);
     expect(result.map((category) => category.title)).toEqual(["Lanternas"]);
+  });
+
+  it("includes all structural categories outside production without products", () => {
+    const result = publicMenuCategories([], { includeEmptyStructural: true });
+    expect(
+      result.map((category) => [category.handle, category.productCount]),
+    ).toEqual([
+      ["lanternas", 0],
+      ["edc", 0],
+      ["cutelaria", 0],
+      ["camping-outdoor", 0],
+    ]);
   });
 });

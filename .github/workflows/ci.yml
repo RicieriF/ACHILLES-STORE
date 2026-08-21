@@ -49,7 +49,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm db:migrate
-      - run: pnpm seed
+      - run: pnpm seed:dev
       - run: pnpm test:integration
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium

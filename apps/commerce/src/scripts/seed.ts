@@ -50,7 +50,10 @@ const updateStoreCurrencies = createWorkflow(
 );
 
 export default async function seedDevelopmentData({ container }: ExecArgs) {
-  if (process.env.NODE_ENV === "production") {
+  if (
+    process.env.NODE_ENV === "production" ||
+    process.env.APP_ENV === "production"
+  ) {
     throw new Error("Development seed cannot run in production");
   }
 
@@ -125,7 +128,14 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     });
   }
 
+  const officialCategoryHandles: Readonly<Record<string, string>> = {
+    Lanternas: "lanternas",
+    "Everyday Carry — EDC": "edc",
+    Cutelaria: "cutelaria",
+    "Camping & Outdoor": "camping-outdoor",
+  };
   const categoryHandle = (name: string) =>
+    officialCategoryHandles[name] ??
     name.toLocaleLowerCase("pt-BR").replaceAll(" ", "-");
   const { data: existingCategories } = await query.graph({
     entity: "product_category",
