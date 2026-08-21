@@ -3,6 +3,7 @@ import {
   sanitizeCJError,
 } from "@achilles/cj-connector";
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { normalizeCJStock } from "../../../../../../integrations/provider-dto";
 
 export async function GET(
   request: MedusaRequest,
@@ -17,7 +18,7 @@ export async function GET(
   }
   try {
     response.json({
-      stock: await cjClientFromEnvironment().stockByVid(vid),
+      stock: normalizeCJStock(await cjClientFromEnvironment().stockByVid(vid)),
       last_checked_at: new Date().toISOString(),
     });
   } catch (error) {

@@ -96,13 +96,14 @@ test("Supplier Hub consulta fixture CJ e salva produto como DRAFT", async ({
     { headers },
   );
   expect(details.status()).toBe(200);
+  const cjImportId = Date.now().toString();
   const imported = await request.post(
     `${commerceUrl}/admin/achilles/integrations/cj/import`,
     {
       headers,
       data: {
-        pid: `CJ-FIXTURE-${Date.now().toString()}`,
-        title: "[E2E] Fixture CJ EDC Organizer",
+        pid: `CJ-FIXTURE-${cjImportId}`,
+        title: `[E2E] Fixture CJ EDC Organizer ${cjImportId}`,
         description: "Fixture autorizada somente em APP_ENV=test.",
         images: [],
         sourceUrl: "https://fixture.invalid/product/CJ-FIXTURE-001",
@@ -111,7 +112,7 @@ test("Supplier Hub consulta fixture CJ e salva produto como DRAFT", async ({
         variants: [
           {
             vid: "CJ-FIXTURE-VID",
-            sku: `CJ-FIXTURE-${Date.now().toString()}`,
+            sku: `CJ-FIXTURE-${cjImportId}`,
             title: "Black",
           },
         ],
@@ -119,13 +120,68 @@ test("Supplier Hub consulta fixture CJ e salva produto como DRAFT", async ({
       },
     },
   );
-  expect(imported.status()).toBe(201);
-  expect(
-    (await imported.json()) as {
-      product: { status: string };
-      isPrimary: boolean;
+  const importedBody = (await imported.json()) as {
+    product?: { status: string };
+    isPrimary?: boolean;
+    message?: string;
+    issues?: unknown;
+  };
+  expect(imported.status(), JSON.stringify(importedBody)).toBe(201);
+  expect(importedBody).toMatchObject({
+    product: { status: "draft" },
+    isPrimary: false,
+  });
+});
+
+test("Alibaba fixture valida APIs oficiais sem fingir conexão real", async ({
+  request,
+}) => {
+  const token = await adminAuth(request);
+  const headers = { authorization: `Bearer ${token}` };
+  const connection = await request.post(
+    `${commerceUrl}/admin/achilles/integrations/alibaba/test`,
+    { headers },
+  );
+  expect(connection.status()).toBe(200);
+  expect(await connection.json()).toMatchObject({
+    connected: true,
+    capabilities: { productLookup: true, orderCreate: false, orderPay: false },
+  });
+  const hub = await request.get(`${commerceUrl}/admin/achilles/integrations`, {
+    headers,
+  });
+  const integrations = (
+    (await hub.json()) as {
+      integrations: Array<{ id: string; status: string }>;
+    }
+  ).integrations;
+  expect(integrations.find((item) => item.id === "alibaba")?.status).not.toBe(
+    "CONNECTED",
+  );
+  const detail = await request.get(
+    `${commerceUrl}/admin/achilles/integrations/alibaba/products/123456`,
+    { headers },
+  );
+  expect(detail.status()).toBe(200);
+  expect(await detail.json()).toMatchObject({
+    product: { id: "123456", title: "Fixture Alibaba EDC" },
+  });
+  const freight = await request.post(
+    `${commerceUrl}/admin/achilles/integrations/alibaba/freight`,
+    {
+      headers,
+      data: {
+        productId: "123456",
+        quantity: 1,
+        zipCode: "01310100",
+        dispatchLocation: "CN",
+      },
     },
-  ).toMatchObject({ product: { status: "draft" }, isPrimary: false });
+  );
+  expect(freight.status()).toBe(200);
+  expect(await freight.json()).toMatchObject({
+    quotes: [{ method: "Fixture Express", currency: "USD" }],
+  });
 });
 
 test("Admin dropshipping operations center uses real operational data", async ({

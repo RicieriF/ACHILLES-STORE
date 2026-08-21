@@ -1,4 +1,5 @@
 import { parseFeatureFlags } from "@achilles/config";
+import { getRuntimeProviderHealth } from "./runtime-health";
 
 export type IntegrationStatus =
   | "CONNECTED"
@@ -7,7 +8,8 @@ export type IntegrationStatus =
   | "DISABLED"
   | "DEGRADED"
   | "UNAVAILABLE"
-  | "NOT_CONFIGURED";
+  | "NOT_CONFIGURED"
+  | "PERMISSION_REQUIRED";
 
 export type IntegrationCard = {
   id: string;
@@ -43,6 +45,8 @@ export function integrationCards(): IntegrationCard[] {
   const cjCredentials = configured("CJ_API_KEY") && configured("CJ_BASE_URL");
   const cjTestMode =
     process.env.APP_ENV === "test" && process.env.CJ_TEST_MODE === "true";
+  const cjRuntime = getRuntimeProviderHealth("CJ");
+  const alibabaRuntime = getRuntimeProviderHealth("ALIBABA");
   const mpEnvironment = process.env.MERCADO_PAGO_ENVIRONMENT;
   const mpCredentials =
     (configured("MERCADO_PAGO_PUBLIC_KEY") ||
@@ -56,16 +60,22 @@ export function integrationCards(): IntegrationCard[] {
       id: "alibaba",
       name: "Alibaba",
       section: "Fornecedores",
-      status: !alibabaEnabled
-        ? "DISABLED"
-        : alibabaCredentials && alibabaAuthorization
-          ? "CONFIGURED"
-          : "NOT_CONFIGURED",
-      health: !alibabaEnabled
-        ? "DISABLED"
-        : alibabaCredentials && alibabaAuthorization
-          ? "DEGRADED"
-          : "NOT_CONFIGURED",
+      status: alibabaRuntime?.connected
+        ? "CONNECTED"
+        : !alibabaEnabled
+          ? "DISABLED"
+          : alibabaCredentials && !alibabaAuthorization
+            ? "PERMISSION_REQUIRED"
+            : alibabaCredentials && alibabaAuthorization
+              ? "CONFIGURED"
+              : "NOT_CONFIGURED",
+      health: alibabaRuntime?.connected
+        ? "HEALTHY"
+        : !alibabaEnabled
+          ? "DISABLED"
+          : alibabaCredentials && alibabaAuthorization
+            ? "DEGRADED"
+            : "NOT_CONFIGURED",
       detail: !alibabaCredentials
         ? "Alibaba não configurado. App Key e App Secret são obrigatórios."
         : !alibabaAuthorization
@@ -78,9 +88,21 @@ export function integrationCards(): IntegrationCard[] {
         refreshToken: configured("ALIBABA_REFRESH_TOKEN"),
       },
       capabilities: {
-        import: flags.ALIBABA_PRODUCT_IMPORT,
-        freight: flags.ALIBABA_FREIGHT_QUOTE,
-        tracking: flags.ALIBABA_TRACKING,
+        import: Boolean(
+          alibabaRuntime?.connected &&
+          alibabaRuntime.capabilities.productLookup &&
+          flags.ALIBABA_PRODUCT_IMPORT,
+        ),
+        freight: Boolean(
+          alibabaRuntime?.connected &&
+          alibabaRuntime.capabilities.freight &&
+          flags.ALIBABA_FREIGHT_QUOTE,
+        ),
+        tracking: Boolean(
+          alibabaRuntime?.connected &&
+          alibabaRuntime.capabilities.tracking &&
+          flags.ALIBABA_TRACKING,
+        ),
         orderCreate: false,
         orderPay: false,
       },
@@ -89,16 +111,20 @@ export function integrationCards(): IntegrationCard[] {
       id: "cj",
       name: "CJdropshipping",
       section: "Fornecedores",
-      status: !flags.CJ_ENABLED
-        ? "DISABLED"
-        : cjCredentials
-          ? "CONFIGURED"
-          : "NOT_CONFIGURED",
-      health: !flags.CJ_ENABLED
-        ? "DISABLED"
-        : cjCredentials
-          ? "DEGRADED"
-          : "NOT_CONFIGURED",
+      status: cjRuntime?.connected
+        ? "CONNECTED"
+        : !flags.CJ_ENABLED
+          ? "DISABLED"
+          : cjCredentials
+            ? "CONFIGURED"
+            : "NOT_CONFIGURED",
+      health: cjRuntime?.connected
+        ? "HEALTHY"
+        : !flags.CJ_ENABLED
+          ? "DISABLED"
+          : cjCredentials
+            ? "DEGRADED"
+            : "NOT_CONFIGURED",
       detail: cjCredentials
         ? cjTestMode
           ? "Fixture E2E configurada; não representa conexão real."
@@ -112,10 +138,10 @@ export function integrationCards(): IntegrationCard[] {
         testMode: cjTestMode,
       },
       capabilities: {
-        productImport: flags.CJ_PRODUCT_IMPORT,
-        stock: flags.CJ_STOCK,
-        shipping: flags.CJ_SHIPPING,
-        tracking: flags.CJ_TRACKING,
+        productImport: Boolean(cjRuntime?.connected && flags.CJ_PRODUCT_IMPORT),
+        stock: Boolean(cjRuntime?.connected && flags.CJ_STOCK),
+        shipping: Boolean(cjRuntime?.connected && flags.CJ_SHIPPING),
+        tracking: Boolean(cjRuntime?.connected && flags.CJ_TRACKING),
         orderCreate: false,
         orderPay: false,
       },

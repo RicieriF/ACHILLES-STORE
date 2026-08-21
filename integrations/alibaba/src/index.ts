@@ -15,6 +15,7 @@ import type {
   Tracking,
 } from "@achilles/domain";
 import { normalizeProduct } from "./normalize";
+import { alibabaClientFromEnvironment } from "./client";
 import {
   AlibabaUrlError,
   assertPublicAlibabaUrl,
@@ -22,6 +23,8 @@ import {
   productReference,
   validateRedirect,
 } from "./url";
+
+export * from "./client";
 
 export { AlibabaUrlError, parseAlibabaUrl, validateRedirect } from "./url";
 export { decimal, normalizeProduct, NORMALIZER_VERSION } from "./normalize";
@@ -54,8 +57,8 @@ export class AlibabaConnector implements SupplierConnector {
     this.capabilities = {
       productImport: flags.ALIBABA_PRODUCT_IMPORT,
       freightQuote: flags.ALIBABA_FREIGHT_QUOTE,
-      orderCreate: flags.ALIBABA_ORDER_CREATE,
-      orderPay: flags.ALIBABA_ORDER_PAY,
+      orderCreate: false,
+      orderPay: false,
       tracking: flags.ALIBABA_TRACKING,
       privateLabel: false,
     };
@@ -98,72 +101,38 @@ export class AlibabaConnector implements SupplierConnector {
   ): Promise<SupplierProductSource> {
     if (!this.capabilities.productImport)
       return this.unavailable("productImport");
-    const safeUrl = await assertPublicAlibabaUrl(reference.sourceUrl);
-    const response = await retrySafe(async () => {
-      const result = await fetchWithTimeout(
-        safeUrl,
-        {
-          headers: {
-            accept: "text/html,application/xhtml+xml",
-            "user-agent":
-              "AchillesStoreImporter/1.0 (+manual-review; no-automation)",
-          },
-          redirect: "manual",
-        },
-        8_000,
+    const payload = await alibabaClientFromEnvironment().product(
+      reference.supplierProductId,
+    );
+    const root = objectValue(payload);
+    const response = objectValue(
+      root?.alibaba_dropshipping_product_get_response,
+    );
+    const value = objectValue(response?.value);
+    const product = Array.isArray(value?.distribution_sale_product)
+      ? objectValue(value.distribution_sale_product[0])
+      : undefined;
+    if (!product)
+      throw new AlibabaCollectionError(
+        "PRODUCT_REMOVED",
+        "Produto não encontrado pela API oficial.",
       );
-      if (result.status >= 300 && result.status < 400)
-        throw new AlibabaUrlError(
-          "REDIRECT_BLOCKED",
-          "Redirecionamento inesperado durante coleta",
-        );
-      if (result.status === 404)
-        throw new AlibabaCollectionError(
-          "PRODUCT_REMOVED",
-          "Produto removido ou não encontrado",
-        );
-      if (result.status === 429)
-        throw new AlibabaCollectionError(
-          "RATE_LIMITED",
-          "Fornecedor limitou temporariamente as consultas",
-        );
-      if (result.status === 401 || result.status === 403)
-        throw new AlibabaCollectionError(
-          "ACCESS_BLOCKED",
-          "Acesso público bloqueado; use preenchimento manual",
-        );
-      if (!result.ok)
-        throw new AlibabaCollectionError(
-          "EXTERNAL_UNAVAILABLE",
-          `Falha transitória do provedor (${String(result.status)})`,
-          result.status >= 500,
-        );
-      return result;
-    });
-    const length = Number(response.headers.get("content-length") ?? 0);
-    if (length > 2_000_000)
-      throw new Error("Resposta externa excede o limite seguro");
-    const html = (await response.text()).slice(0, 2_000_000);
-    const jsonLd = extractProductJsonLd(html);
+    const moq = objectValue(product.moq_and_price);
+    const price = objectValue(moq?.moq_unit_price);
     return {
       reference,
-      title: stringValue(jsonLd?.name),
-      description: stringValue(jsonLd?.description)?.slice(0, 8_000),
-      currency: stringValue(
-        jsonLd?.offers && objectValue(jsonLd.offers)?.priceCurrency,
-      ),
-      priceMin:
-        stringValue(jsonLd?.offers && objectValue(jsonLd.offers)?.lowPrice) ??
-        stringValue(jsonLd?.offers && objectValue(jsonLd.offers)?.price),
-      priceMax: stringValue(
-        jsonLd?.offers && objectValue(jsonLd.offers)?.highPrice,
-      ),
-      media: arrayStrings(jsonLd?.image).slice(0, 20),
+      title: stringValue(product.name),
+      description: stringValue(product.description)?.slice(0, 8_000),
+      currency: stringValue(price?.currency),
+      priceMin: stringValue(price?.amount),
+      priceMax: stringValue(product.price_range)?.split("~")[1],
+      moq: Number(moq?.min_order_quantity) || undefined,
+      media: arrayStrings(product.product_image_list).slice(0, 20),
       specifications: {},
       variants: [],
-      metadata: { parser: "JSON_LD_ONLY", incomplete: true },
+      metadata: { source: "ALIBABA_OFFICIAL_API", incomplete: true },
       obtainedAt: new Date().toISOString(),
-      method: "PUBLIC_PAGE",
+      method: "OFFICIAL_API",
     };
   }
   normalizeProduct(source: SupplierProductSource): NormalizedSupplierProduct {
@@ -246,29 +215,6 @@ export async function retrySafe<T>(operation: () => Promise<T>): Promise<T> {
     }
   }
   throw last;
-}
-function extractProductJsonLd(
-  html: string,
-): Record<string, unknown> | undefined {
-  const scripts = html.matchAll(
-    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
-  );
-  for (const match of scripts) {
-    try {
-      // JSON.parse is the isolated untyped boundary for external JSON-LD.
-      const parsed: unknown = JSON.parse(match[1] ?? "null");
-      const candidates: unknown[] = Array.isArray(parsed)
-        ? (parsed as unknown[])
-        : [parsed];
-      const product = candidates.find(
-        (item) => objectValue(item)?.["@type"] === "Product",
-      );
-      if (product) return objectValue(product);
-    } catch {
-      continue;
-    }
-  }
-  return undefined;
 }
 const objectValue = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === "object" && !Array.isArray(value)

@@ -151,6 +151,17 @@ const SuppliersPage = () => {
         connected: boolean;
         error: { message: string } | null;
       }>("/admin/achilles/integrations/cj/test", { method: "POST" }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["achilles-integrations"] }),
+  });
+  const testAlibaba = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch<{
+        connected: boolean;
+        error: { message: string } | null;
+      }>("/admin/achilles/integrations/alibaba/test", { method: "POST" }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["achilles-integrations"] }),
   });
   const create = useMutation({
     mutationFn: () =>
@@ -239,6 +250,27 @@ const SuppliersPage = () => {
                       TESTAR CONEXÃO
                     </Button>
                   )}
+                  {item.id === "alibaba" && (
+                    <Button
+                      variant="secondary"
+                      disabled={testAlibaba.isPending}
+                      onClick={() => {
+                        testAlibaba.mutate();
+                      }}
+                    >
+                      TESTAR CONEXÃO
+                    </Button>
+                  )}
+                  {item.id === "alibaba" && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        window.location.assign("/app/achilles-alibaba-catalog");
+                      }}
+                    >
+                      ABRIR CATÁLOGO ALIBABA
+                    </Button>
+                  )}
                   {item.id === "cj" && (
                     <Button
                       variant="secondary"
@@ -255,6 +287,13 @@ const SuppliersPage = () => {
                     {testCJ.data.connected
                       ? "Conexão CJ validada."
                       : testCJ.data.error?.message}
+                  </Text>
+                )}
+                {item.id === "alibaba" && testAlibaba.data && (
+                  <Text className="mt-2">
+                    {testAlibaba.data.connected
+                      ? "Conexão Alibaba validada pela API oficial."
+                      : testAlibaba.data.error?.message}
                   </Text>
                 )}
               </div>

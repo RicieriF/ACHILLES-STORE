@@ -5,6 +5,7 @@ import {
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
 import { parseOrReply } from "../../../http";
+import { normalizeCJList } from "../../../../../../integrations/provider-dto";
 
 const schema = z.object({
   keyword: z.string().trim().max(120).optional(),
@@ -32,7 +33,12 @@ export async function GET(
       page: query.page,
       size: query.size,
     });
-    response.json({ products, source: "CJ_API_V2" });
+    response.json({
+      ...normalizeCJList(products),
+      page: query.page,
+      size: query.size,
+      source: "CJ_API_V2",
+    });
   } catch (error) {
     response.status(503).json(sanitizeCJError(error));
   }

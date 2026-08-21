@@ -3,6 +3,7 @@ import {
   sanitizeCJError,
 } from "@achilles/cj-connector";
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { normalizeCJProduct } from "../../../../../../../integrations/provider-dto";
 
 export async function GET(
   request: MedusaRequest,
@@ -17,7 +18,10 @@ export async function GET(
   }
   try {
     const product = await cjClientFromEnvironment().product(pid);
-    response.json({ product, source: "CJ_API_V2" });
+    response.json({
+      product: normalizeCJProduct(product),
+      source: "CJ_API_V2",
+    });
   } catch (error) {
     response.status(503).json(sanitizeCJError(error));
   }

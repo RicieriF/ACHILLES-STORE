@@ -1,4 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { getRuntimeProviderHealth } from "../../../../../../integrations/runtime-health";
 
 export function GET(_request: MedusaRequest, response: MedusaResponse): void {
   const appConfigured = Boolean(
@@ -6,6 +7,7 @@ export function GET(_request: MedusaRequest, response: MedusaResponse): void {
     process.env.ALIBABA_APP_SECRET?.trim(),
   );
   const authorized = Boolean(process.env.ALIBABA_ACCESS_TOKEN?.trim());
+  const runtime = getRuntimeProviderHealth("ALIBABA");
   response.json({
     provider: "ALIBABA",
     appConfigured,
@@ -14,12 +16,18 @@ export function GET(_request: MedusaRequest, response: MedusaResponse): void {
       ? "NOT_CONFIGURED"
       : !authorized
         ? "PERMISSION_REQUIRED"
-        : "VALIDATION_REQUIRED",
+        : runtime?.connected
+          ? "CONNECTED"
+          : "VALIDATION_REQUIRED",
     capabilities: {
-      productSearch: "NOT_VALIDATED",
-      supplierData: "NOT_VALIDATED",
-      freightQuote: "NOT_VALIDATED",
-      tracking: "NOT_VALIDATED",
+      productLookup: runtime?.capabilities.productLookup
+        ? "GRANTED"
+        : "NOT_VALIDATED",
+      supplierData: runtime?.capabilities.supplierData
+        ? "GRANTED"
+        : "NOT_VALIDATED",
+      freightQuote: runtime?.capabilities.freight ? "GRANTED" : "NOT_VALIDATED",
+      tracking: runtime?.capabilities.tracking ? "GRANTED" : "NOT_VALIDATED",
       orderCreate: "OFF",
       orderPay: "OFF",
     },
