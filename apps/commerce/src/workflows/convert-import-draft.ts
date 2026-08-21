@@ -8,7 +8,8 @@ import { SUPPLIER_DOMAIN_MODULE } from "../modules/supplier-domain";
 import type SupplierDomainModuleService from "../modules/supplier-domain/service";
 import { recordAudit } from "../api/admin/achilles/audit";
 
-const pendingSupplierName = "[PENDENTE] Fornecedor Alibaba não identificado";
+const pendingSupplierName = (provider: string) =>
+  `[PENDENTE] Fornecedor ${provider} não identificado`;
 const activeConversions = new Set<string>();
 type DraftVariant = {
   supplierSku: string;
@@ -218,11 +219,11 @@ export async function convertImportDraft(
 
     let [supplier] = await service.listSuppliers({
       provider: draft.provider,
-      name: pendingSupplierName,
+      name: pendingSupplierName(draft.provider),
     });
     if (!supplier) {
       supplier = await service.createSuppliers({
-        name: pendingSupplierName,
+        name: pendingSupplierName(draft.provider),
         provider: draft.provider,
         status: "INACTIVE",
         country_code: "CN",
@@ -245,7 +246,6 @@ export async function convertImportDraft(
       metadata: { import_draft_id: draft.id },
     });
 
-    const offers = await service.listSupplierOffers({ product_id: product.id });
     const offer = await service.createSupplierOffers({
       supplier_id: supplier.id,
       product_id: product.id,
@@ -261,7 +261,7 @@ export async function convertImportDraft(
       status: "INACTIVE",
       fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
       private_label_supported: false,
-      is_primary: offers.length === 0,
+      is_primary: false,
       freight_metadata: null,
       last_sync_at: draft.last_fetch_at ?? null,
       sync_status: draft.last_fetch_at ? "SYNCED" : "NEVER_SYNCED",

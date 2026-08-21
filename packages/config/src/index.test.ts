@@ -15,6 +15,7 @@ describe("workspace environment", () => {
 describe("feature flags", () => {
   it("defaults every supplier and payment capability to disabled", () => {
     expect(parseFeatureFlags({})).toEqual({
+      ALIBABA_ENABLED: false,
       ALIBABA_PRODUCT_IMPORT: false,
       ALIBABA_FREIGHT_QUOTE: false,
       ALIBABA_ORDER_CREATE: false,

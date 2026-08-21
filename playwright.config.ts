@@ -7,6 +7,14 @@ const e2eEnvironment = {
   PAYMENT_TEST_PROVIDER_ENABLED: "true",
   PAYMENT_TEST_WEBHOOK_SECRET: "playwright_test_webhook_secret_only",
   E2E_ADMIN_PASSWORD: "E2eOnly_012_Strong",
+  CJ_ENABLED: "true",
+  CJ_PRODUCT_IMPORT: "true",
+  CJ_STOCK: "true",
+  CJ_SHIPPING: "true",
+  CJ_TRACKING: "true",
+  CJ_TEST_MODE: "true",
+  CJ_API_KEY: "e2e-fixture-only",
+  CJ_BASE_URL: "https://fixture.invalid",
 };
 const reuseE2eServers = process.env.E2E_REUSE_SERVERS === "true";
 Object.assign(process.env, e2eEnvironment);

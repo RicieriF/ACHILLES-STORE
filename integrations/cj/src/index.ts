@@ -15,6 +15,8 @@ import type {
   Tracking,
 } from "@achilles/domain";
 
+export * from "./client";
+
 export class CJCapabilityDisabledError extends Error {
   constructor(capability: keyof SupplierCapabilities) {
     super(`CJ capability is disabled or not configured: ${capability}`);

@@ -2,6 +2,7 @@ import { parseFeatureFlags } from "@achilles/config";
 
 export type IntegrationStatus =
   | "CONNECTED"
+  | "CONNECTING"
   | "CONFIGURED"
   | "DISABLED"
   | "DEGRADED"
@@ -33,10 +34,13 @@ export function integrationCards(): IntegrationCard[] {
   const flags = parseFeatureFlags(process.env);
   const alibabaCredentials =
     configured("ALIBABA_APP_KEY") && configured("ALIBABA_APP_SECRET");
-  const cjCredentials =
-    configured("CJ_API_KEY") &&
-    configured("CJ_ACCESS_TOKEN") &&
-    configured("CJ_BASE_URL");
+  const alibabaAuthorization = configured("ALIBABA_ACCESS_TOKEN");
+  const alibabaEnabled =
+    flags.ALIBABA_ENABLED ||
+    flags.ALIBABA_PRODUCT_IMPORT ||
+    flags.ALIBABA_FREIGHT_QUOTE ||
+    flags.ALIBABA_TRACKING;
+  const cjCredentials = configured("CJ_API_KEY") && configured("CJ_BASE_URL");
   const mpEnvironment = process.env.MERCADO_PAGO_ENVIRONMENT;
   const mpCredentials =
     (configured("MERCADO_PAGO_PUBLIC_KEY") ||
@@ -50,40 +54,33 @@ export function integrationCards(): IntegrationCard[] {
       id: "alibaba",
       name: "Alibaba",
       section: "Fornecedores",
-      status: !Object.values({
-        import: flags.ALIBABA_PRODUCT_IMPORT,
-        freight: flags.ALIBABA_FREIGHT_QUOTE,
-        tracking: flags.ALIBABA_TRACKING,
-        orderCreate: flags.ALIBABA_ORDER_CREATE,
-        orderPay: flags.ALIBABA_ORDER_PAY,
-      }).some(Boolean)
+      status: !alibabaEnabled
         ? "DISABLED"
-        : alibabaCredentials
+        : alibabaCredentials && alibabaAuthorization
           ? "CONFIGURED"
           : "NOT_CONFIGURED",
-      health:
-        !flags.ALIBABA_PRODUCT_IMPORT &&
-        !flags.ALIBABA_FREIGHT_QUOTE &&
-        !flags.ALIBABA_TRACKING &&
-        !flags.ALIBABA_ORDER_CREATE &&
-        !flags.ALIBABA_ORDER_PAY
-          ? "DISABLED"
-          : alibabaCredentials
-            ? "DEGRADED"
-            : "NOT_CONFIGURED",
-      detail: alibabaCredentials
-        ? "Credenciais presentes; conectividade externa não foi sondada."
-        : "Credenciais ausentes ou incompletas.",
+      health: !alibabaEnabled
+        ? "DISABLED"
+        : alibabaCredentials && alibabaAuthorization
+          ? "DEGRADED"
+          : "NOT_CONFIGURED",
+      detail: !alibabaCredentials
+        ? "Alibaba não configurado. App Key e App Secret são obrigatórios."
+        : !alibabaAuthorization
+          ? "App configurado; permissão/autorização Open Platform necessária."
+          : "Autorização presente; conexão real ainda precisa ser validada.",
       configured: {
         appKey: configured("ALIBABA_APP_KEY"),
         appSecret: configured("ALIBABA_APP_SECRET"),
+        accessToken: alibabaAuthorization,
+        refreshToken: configured("ALIBABA_REFRESH_TOKEN"),
       },
       capabilities: {
         import: flags.ALIBABA_PRODUCT_IMPORT,
         freight: flags.ALIBABA_FREIGHT_QUOTE,
         tracking: flags.ALIBABA_TRACKING,
-        orderCreate: flags.ALIBABA_ORDER_CREATE,
-        orderPay: flags.ALIBABA_ORDER_PAY,
+        orderCreate: false,
+        orderPay: false,
       },
     },
     {
@@ -106,6 +103,7 @@ export function integrationCards(): IntegrationCard[] {
       configured: {
         apiKey: configured("CJ_API_KEY"),
         accessToken: configured("CJ_ACCESS_TOKEN"),
+        refreshToken: configured("CJ_REFRESH_TOKEN"),
         baseUrl: configured("CJ_BASE_URL"),
       },
       capabilities: {
@@ -113,8 +111,8 @@ export function integrationCards(): IntegrationCard[] {
         stock: flags.CJ_STOCK,
         shipping: flags.CJ_SHIPPING,
         tracking: flags.CJ_TRACKING,
-        orderCreate: flags.CJ_ORDER_CREATE,
-        orderPay: flags.CJ_ORDER_PAY,
+        orderCreate: false,
+        orderPay: false,
       },
     },
     {
@@ -249,6 +247,9 @@ export function sanitizedOperationalConfig() {
       alibabaAppSecret: maskConfigured("ALIBABA_APP_SECRET"),
       cjApiKey: maskConfigured("CJ_API_KEY"),
       cjAccessToken: maskConfigured("CJ_ACCESS_TOKEN"),
+      cjRefreshToken: maskConfigured("CJ_REFRESH_TOKEN"),
+      alibabaAccessToken: maskConfigured("ALIBABA_ACCESS_TOKEN"),
+      alibabaRefreshToken: maskConfigured("ALIBABA_REFRESH_TOKEN"),
       mercadoPagoAccessToken: maskConfigured("MERCADO_PAGO_ACCESS_TOKEN"),
       mercadoPagoWebhookSecret: maskConfigured("MERCADO_PAGO_WEBHOOK_SECRET"),
       resendApiKey: maskConfigured("RESEND_API_KEY"),

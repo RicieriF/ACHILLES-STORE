@@ -1,10 +1,16 @@
-export type ExtensionStatus = "CONFIGURED" | "NOT_CONFIGURED" | "DISABLED";
+export type ExtensionStatus =
+  "INSTALLED" | "CONFIGURED" | "NOT_CONFIGURED" | "DISABLED";
 
 export type ExtensionCard = {
   id: string;
   name: string;
   category:
-    "Observabilidade" | "Arquivos" | "Comunicação" | "Busca" | "Logística";
+    | "Fornecedores"
+    | "Observabilidade"
+    | "Arquivos"
+    | "Comunicação"
+    | "Busca"
+    | "Logística";
   status: ExtensionStatus;
   detail: string;
   configured: Record<string, boolean>;
@@ -31,6 +37,24 @@ export function extensionCards(
   const s3 = complete(environment, s3Keys);
   const posthogEnabled = environment.POSTHOG_ENABLED === "true";
   return [
+    {
+      id: "cj-connector",
+      name: "CJ Connector",
+      category: "Fornecedores",
+      status: "INSTALLED",
+      detail:
+        "Conector instalado. Saúde e autorização são exibidas no Hub de Fornecedores.",
+      configured: { enabled: environment.CJ_ENABLED === "true" },
+    },
+    {
+      id: "alibaba-connector",
+      name: "Alibaba Connector",
+      category: "Fornecedores",
+      status: "INSTALLED",
+      detail:
+        "Conector instalado. Saúde e permissões são exibidas no Hub de Fornecedores.",
+      configured: { enabled: environment.ALIBABA_ENABLED === "true" },
+    },
     {
       id: "sentry",
       name: "Sentry",
