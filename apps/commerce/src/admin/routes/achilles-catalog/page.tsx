@@ -58,7 +58,7 @@ const buildQuickVariants = (form: {
     title: [variant.color, variant.size, variant.power]
       .filter(Boolean)
       .join(" / "),
-    sku: `${form.sku}-${String(index + 1)}`,
+    ...(form.sku ? { sku: `${form.sku}-${String(index + 1)}` } : {}),
     ...(variant.color ? { color: variant.color } : {}),
     ...(variant.size ? { size: variant.size } : {}),
     ...(variant.power ? { power: variant.power } : {}),
@@ -182,7 +182,13 @@ const ProductCard = ({
   </div>
 );
 
-const QuickCreate = ({ close }: { close: () => void }) => {
+const QuickCreate = ({
+  close,
+  onCreated,
+}: {
+  close: () => void;
+  onCreated: () => void;
+}) => {
   const client = useQueryClient();
   const [step, setStep] = useState(1);
   const [uploading, setUploading] = useState(false);
@@ -218,14 +224,17 @@ const QuickCreate = ({ close }: { close: () => void }) => {
       }),
   });
   const create = useMutation({
-    mutationFn: () =>
+    mutationFn: (_intent: "CLOSE" | "CONTINUE") =>
       sdk.client.fetch<{ product: { id: string } }>(
         "/admin/achilles/operations/products",
         {
           method: "POST",
           body: {
             ...form,
+            description: form.description.trim() || null,
+            category_id: form.category_id || null,
             price_brl: form.price_brl ? Number(form.price_brl) : null,
+            sku: form.sku.trim() || null,
             supplier_id: form.supplier_id || null,
             supplier_product_id: form.supplier_product_id || null,
             source_url: form.source_url || null,
@@ -237,11 +246,16 @@ const QuickCreate = ({ close }: { close: () => void }) => {
           },
         },
       ),
-    onSuccess: async () => {
+    onSuccess: async (data, intent) => {
       await client.invalidateQueries({ queryKey: ["achilles-catalog"] });
       await client.invalidateQueries({
         queryKey: ["achilles-operations-dashboard"],
       });
+      onCreated();
+      if (intent === "CONTINUE") {
+        window.location.assign(`/app/products/${data.product.id}`);
+        return;
+      }
       close();
     },
   });
@@ -262,14 +276,13 @@ const QuickCreate = ({ close }: { close: () => void }) => {
       setUploading(false);
     }
   };
-  const supplierComplete =
-    !form.supplier_id ||
-    Boolean(form.supplier_product_id && form.source_url && form.supplier_cost);
-  const canFinish =
-    form.title.length >= 2 &&
-    form.description.length >= 2 &&
-    Boolean(form.category_id && form.sku) &&
-    supplierComplete;
+  const canFinish = form.title.trim().length >= 2;
+  const supplierLinked = Boolean(
+    form.supplier_id &&
+    form.supplier_product_id &&
+    form.source_url &&
+    form.supplier_cost,
+  );
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-black/30"
@@ -492,21 +505,24 @@ const QuickCreate = ({ close }: { close: () => void }) => {
         {step === 5 && (
           <div className="space-y-3 rounded border p-4">
             <Heading level="h2">Revisão</Heading>
+            <Text>{canFinish ? "✓ Título" : "⚠ Título obrigatório"}</Text>
+            <Text>{form.image_urls.length ? "✓ Imagem" : "⚠ Sem imagem"}</Text>
             <Text>
-              <strong>{form.title || "Sem título"}</strong>
+              {form.price_brl
+                ? `✓ Preço ${money(Number(form.price_brl))}`
+                : "⚠ Preço não informado"}
             </Text>
-            <Text>{form.description || "Sem descrição"}</Text>
+            <Text>{form.sku ? "✓ SKU" : "⚠ SKU ausente"}</Text>
             <Text>
-              SKU: {form.sku || "ausente"} · Preço:{" "}
-              {form.price_brl ? money(Number(form.price_brl)) : "não informado"}
+              {supplierLinked
+                ? "✓ Fornecedor vinculado"
+                : "⚠ Fornecedor não vinculado"}
             </Text>
-            <Text>
-              Fornecedor: {form.supplier_id ? "vinculado" : "não vinculado"}
-            </Text>
+            <Text>⚠ Compliance pendente</Text>
             <Text>
               Variantes: {String(buildQuickVariants(form).length || 1)}
             </Text>
-            <Badge color="orange">DRAFT · publicação exige fluxo humano</Badge>
+            <Badge color="orange">DRAFT · incompleto</Badge>
           </div>
         )}
         {create.isError && (
@@ -533,14 +549,25 @@ const QuickCreate = ({ close }: { close: () => void }) => {
               Continuar
             </Button>
           ) : (
-            <Button
-              disabled={!canFinish || create.isPending}
-              onClick={() => {
-                create.mutate();
-              }}
-            >
-              {create.isPending ? "Salvando…" : "Salvar DRAFT"}
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                disabled={!canFinish || create.isPending}
+                variant="secondary"
+                onClick={() => {
+                  create.mutate("CONTINUE");
+                }}
+              >
+                SALVAR E CONTINUAR EDITANDO
+              </Button>
+              <Button
+                disabled={!canFinish || create.isPending}
+                onClick={() => {
+                  create.mutate("CLOSE");
+                }}
+              >
+                {create.isPending ? "Salvando…" : "SALVAR DRAFT"}
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -652,6 +679,7 @@ const CatalogPage = () => {
   const [view, setView] = useState<View>("CARDS");
   const [filter, setFilter] = useState<Filter>("ALL");
   const [creating, setCreating] = useState(false);
+  const [draftCreated, setDraftCreated] = useState(false);
   const [editing, setEditing] = useState<OperationalProduct | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const query = useQuery({
@@ -763,6 +791,11 @@ const CatalogPage = () => {
           </div>
         </div>
       </Container>
+      {draftCreated && (
+        <Container>
+          <Text>Rascunho criado. Complete os dados antes de publicar.</Text>
+        </Container>
+      )}
       {selected.length > 0 && (
         <Container>
           <div className="flex flex-wrap items-center gap-2">
@@ -923,6 +956,9 @@ const CatalogPage = () => {
         <QuickCreate
           close={() => {
             setCreating(false);
+          }}
+          onCreated={() => {
+            setDraftCreated(true);
           }}
         />
       )}{" "}

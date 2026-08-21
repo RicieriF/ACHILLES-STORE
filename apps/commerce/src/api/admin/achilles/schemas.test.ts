@@ -4,6 +4,7 @@ import {
   paginationInput,
   productPolicyInput,
   pricingAssumptionsInput,
+  quickProductCreateInput,
   supplierInput,
   supplierOfferInput,
   supplierOfferPatchInput,
@@ -167,6 +168,50 @@ describe("admin pricing validation", () => {
     expect(() =>
       pricingAssumptionsInput.parse({ ...pricing, localDeliveryCost: "-1" }),
     ).toThrow();
+  });
+});
+
+describe("admin quick product draft validation", () => {
+  it("accepts a title-only draft and applies safe incomplete defaults", () => {
+    expect(quickProductCreateInput.parse({ title: "Produto mínimo" })).toEqual(
+      expect.objectContaining({
+        title: "Produto mínimo",
+        description: null,
+        category_id: null,
+        image_urls: [],
+        price_brl: null,
+        sku: null,
+        availability: "UNKNOWN",
+        fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
+        variants: [],
+      }),
+    );
+  });
+
+  it("accepts an image or a price without requiring a supplier", () => {
+    expect(
+      quickProductCreateInput.parse({
+        title: "Produto com imagem",
+        image_urls: ["https://example.invalid/draft.png"],
+      }).image_urls,
+    ).toHaveLength(1);
+    expect(
+      quickProductCreateInput.parse({
+        title: "Produto com preço",
+        price_brl: 99.9,
+      }).price_brl,
+    ).toBe(99.9);
+    expect(
+      quickProductCreateInput.parse({
+        title: "Produto com vínculo ainda incompleto",
+        supplier_id: "sup_1",
+      }).supplier_id,
+    ).toBe("sup_1");
+  });
+
+  it("rejects a draft without a valid title", () => {
+    expect(() => quickProductCreateInput.parse({})).toThrow();
+    expect(() => quickProductCreateInput.parse({ title: " " })).toThrow();
   });
 });
 
