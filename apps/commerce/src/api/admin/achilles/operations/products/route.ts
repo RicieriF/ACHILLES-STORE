@@ -33,7 +33,9 @@ export async function POST(
   }>(Modules.PRODUCT);
   const [[shippingProfile], category] = await Promise.all([
     fulfillment.listShippingProfiles(),
-    products.retrieveProductCategory(input.category_id),
+    input.category_id
+      ? products.retrieveProductCategory(input.category_id)
+      : Promise.resolve(null),
   ]);
   if (!shippingProfile) {
     response.status(409).json({
@@ -51,7 +53,7 @@ export async function POST(
           description: input.description,
           status: ProductStatus.DRAFT,
           shipping_profile_id: shippingProfile.id,
-          category_ids: [category.id],
+          ...(category ? { category_ids: [category.id] } : {}),
           sales_channels: [],
           images: input.image_urls.map((url) => ({ url })),
           ...(input.image_urls[0] ? { thumbnail: input.image_urls[0] } : {}),
@@ -72,8 +74,14 @@ export async function POST(
     SUPPLIER_DOMAIN_MODULE,
   );
   const edged =
-    category.handle === "cutelaria" ||
-    (category.name ?? "").toLocaleLowerCase("pt-BR").includes("cutelaria");
+    category?.handle === "cutelaria" ||
+    (category?.name ?? "").toLocaleLowerCase("pt-BR").includes("cutelaria");
+  const hasCompleteSupplierOffer = Boolean(
+    input.supplier_id &&
+    input.supplier_product_id &&
+    input.source_url &&
+    input.supplier_cost,
+  );
   const policy = await domain.createProductPolicies({
     product_id: product.id,
     fulfillment_mode: input.fulfillment_mode,
@@ -82,12 +90,13 @@ export async function POST(
     compliance_notes: edged
       ? "Cutelaria exige revisão humana antes de publicação."
       : null,
-    commercial_readiness: input.supplier_id
+    commercial_readiness: hasCompleteSupplierOffer
       ? "PRICING_REQUIRED"
       : "DATA_INCOMPLETE",
   });
   let offerId: string | null = null;
   if (
+    hasCompleteSupplierOffer &&
     input.supplier_id &&
     input.supplier_product_id &&
     input.source_url &&
@@ -151,7 +160,7 @@ function buildVariants(input: QuickProductCreateInput) {
       options: [{ title: "Modelo", values: ["Padrão"] }],
       items: supplied.map((variant) => ({
         title: variant.title,
-        sku: variant.sku,
+        ...(variant.sku ? { sku: variant.sku } : {}),
         manage_inventory: false,
         options: { Modelo: "Padrão" },
         prices:
@@ -172,7 +181,7 @@ function buildVariants(input: QuickProductCreateInput) {
     })),
     items: supplied.map((variant) => ({
       title: variant.title,
-      sku: variant.sku,
+      ...(variant.sku ? { sku: variant.sku } : {}),
       manage_inventory: false,
       options: Object.fromEntries(
         activeDimensions.map(([title, field]) => [

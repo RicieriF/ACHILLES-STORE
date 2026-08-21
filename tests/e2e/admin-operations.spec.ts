@@ -17,6 +17,61 @@ async function adminAuth(request: APIRequestContext): Promise<string> {
   return body.token;
 }
 
+async function createQuickDraft(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  data: Record<string, unknown>,
+) {
+  return request.post(`${commerceUrl}/admin/achilles/operations/products`, {
+    headers,
+    data: { ...data, test_fixture: true },
+  });
+}
+
+test("Quick Create accepts incomplete drafts while publication stays gated", async ({
+  request,
+}) => {
+  const token = await adminAuth(request);
+  const headers = { authorization: `Bearer ${token}` };
+  const unique = Date.now().toString();
+  const cases = [
+    { title: `[E2E] Draft apenas título ${unique}` },
+    {
+      title: `[E2E] Draft título e imagem ${unique}`,
+      image_urls: ["https://example.invalid/achilles-draft.png"],
+    },
+    {
+      title: `[E2E] Draft preço sem fornecedor ${unique}`,
+      price_brl: 79.9,
+    },
+  ];
+  const createdIds: string[] = [];
+  for (const draft of cases) {
+    const response = await createQuickDraft(request, headers, draft);
+    expect(response.status()).toBe(201);
+    const body = (await response.json()) as {
+      product: { id: string; status: string };
+      policy: { compliance_status: string; commercial_readiness: string };
+      offerId: string | null;
+    };
+    expect(body.product.status).toBe("draft");
+    expect(body.policy.compliance_status).toBe("PENDING");
+    expect(body.policy.commercial_readiness).toBe("DATA_INCOMPLETE");
+    expect(body.offerId).toBeNull();
+    createdIds.push(body.product.id);
+  }
+
+  const invalid = await createQuickDraft(request, headers, {});
+  expect(invalid.status()).toBe(400);
+
+  const publicCatalog = await request.get(
+    `${commerceUrl}/achilles/store/catalog`,
+  );
+  expect(publicCatalog.status()).toBe(200);
+  const publicBody = JSON.stringify(await publicCatalog.json());
+  for (const id of createdIds) expect(publicBody).not.toContain(id);
+});
+
 test("Admin dropshipping operations center uses real operational data", async ({
   page,
   request,
@@ -24,41 +79,16 @@ test("Admin dropshipping operations center uses real operational data", async ({
   mkdirSync(artifactDirectory, { recursive: true });
   const token = await adminAuth(request);
   const headers = { authorization: `Bearer ${token}` };
-  const categoriesResponse = await request.get(
-    `${commerceUrl}/admin/product-categories?limit=1`,
-    { headers },
-  );
-  expect(categoriesResponse.status()).toBe(200);
-  const categories = (await categoriesResponse.json()) as {
-    product_categories: Array<{ id: string }>;
-  };
-  const categoryId = categories.product_categories[0]?.id;
-  if (!categoryId) throw new Error("Categoria E2E ausente");
   const unique = Date.now().toString();
   const title = `[E2E] Produto Operacional ${unique}`;
-  const create = await request.post(
-    `${commerceUrl}/admin/achilles/operations/products`,
-    {
-      headers,
-      data: {
-        title,
-        description: "Fixture operacional descartável para validar o Admin.",
-        category_id: categoryId,
-        image_urls: [],
-        price_brl: 129.9,
-        sku: `E2E-OPS-${unique}`,
-        availability: "UNKNOWN",
-        fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
-        variants: [],
-        test_fixture: true,
-      },
-    },
-  );
+  const create = await createQuickDraft(request, headers, { title });
   expect(create.status()).toBe(201);
   const created = (await create.json()) as {
     product: { id: string; status: string };
+    policy: { compliance_status: string };
   };
   expect(created.product.status).toBe("draft");
+  expect(created.policy.compliance_status).toBe("PENDING");
 
   await page.setExtraHTTPHeaders(headers);
   await page.goto(`${commerceUrl}/app/achilles`);
@@ -97,9 +127,31 @@ test("Admin dropshipping operations center uses real operational data", async ({
   await page.getByRole("button", { name: "Novo produto" }).click();
   await expect(page.getByTestId("quick-create-panel")).toBeVisible();
   await expect(page.getByText("Etapa 1 de 5")).toBeVisible();
+  for (let step = 1; step < 5; step += 1) {
+    await page.getByRole("button", { name: "Continuar" }).click();
+  }
   await expect(
-    page.getByText("publicação exige fluxo humano"),
-  ).not.toBeVisible();
+    page.getByRole("button", { name: "SALVAR DRAFT" }),
+  ).toBeDisabled();
+  for (let step = 5; step > 1; step -= 1) {
+    await page.getByRole("button", { name: "Voltar" }).click();
+  }
+  await page
+    .getByTestId("quick-create-panel")
+    .getByPlaceholder("Título")
+    .fill("Rascunho mínimo");
+  for (let step = 1; step < 5; step += 1) {
+    await page.getByRole("button", { name: "Continuar" }).click();
+  }
+  await expect(page.getByText("⚠ Sem imagem")).toBeVisible();
+  await expect(page.getByText("⚠ Preço não informado")).toBeVisible();
+  await expect(page.getByText("⚠ SKU ausente")).toBeVisible();
+  await expect(page.getByText("⚠ Fornecedor não vinculado")).toBeVisible();
+  await expect(page.getByText("⚠ Compliance pendente")).toBeVisible();
+  await expect(page.getByText("DRAFT · incompleto")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "SALVAR DRAFT" }),
+  ).toBeEnabled();
   await page.screenshot({ path: `${artifactDirectory}/quick-create.png` });
   await page.getByRole("button", { name: "Fechar" }).click();
 
