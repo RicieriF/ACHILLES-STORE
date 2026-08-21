@@ -167,7 +167,6 @@ export const quickProductCreateInput = z
     category_id: z.string().min(1),
     image_urls: z.array(z.url()).max(12).default([]),
     price_brl: z.number().nonnegative().nullable(),
-    compare_at_price_brl: z.number().positive().nullable().optional(),
     sku: z.string().trim().min(1).max(120),
     availability: z.enum(["UNKNOWN", "IN_STOCK", "OUT_OF_STOCK"]),
     fulfillment_mode: z.enum([
@@ -211,7 +210,6 @@ export const quickProductEditInput = z.object({
   category_id: z.string().min(1).optional(),
   image_urls: z.array(z.url()).max(12).optional(),
   price_brl: z.number().nonnegative().nullable().optional(),
-  compare_at_price_brl: z.number().positive().nullable().optional(),
   sku: z.string().trim().min(1).max(120).optional(),
   availability: z.enum(["UNKNOWN", "IN_STOCK", "OUT_OF_STOCK"]).optional(),
   featured: z.boolean().optional(),
