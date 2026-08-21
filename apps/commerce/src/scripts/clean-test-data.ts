@@ -88,8 +88,9 @@ export default async function cleanTestData({ container }: ExecArgs) {
 async function createTargets(database: CleanupDatabase): Promise<void> {
   await database.raw(
     `create temporary table cleanup_products on commit drop as
-      select id from product where deleted_at is null and (
+      select id from product where (
         metadata->>'seed' = any (?::text[]) or handle = any (?::text[])
+        or metadata->>'achilles_test_fixture' = 'true'
       )`,
     [
       ["TASK_002_DEVELOPMENT_ONLY", "TASK_013_DEVELOPMENT_ONLY"],
@@ -288,6 +289,9 @@ async function softDeleteTargets(database: CleanupDatabase): Promise<void> {
     },
     {
       sql: "update product_policy set deleted_at = now(), updated_at = now() where deleted_at is null and product_id in (select id from cleanup_products)",
+    },
+    {
+      sql: "update product_variant set deleted_at = now(), updated_at = now() where deleted_at is null and product_id in (select id from cleanup_products)",
     },
     {
       sql: "update import_attempt set deleted_at = now(), updated_at = now() where deleted_at is null and import_draft_id in (select id from import_draft where source_url like '%Fictitious-Rechargeable-Outdoor-Flashlight%')",
