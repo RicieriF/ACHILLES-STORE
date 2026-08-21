@@ -297,5 +297,5 @@ const CJCatalogPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "ACHILLES · CJ Catálogo" });
+export const config = defineRouteConfig({ label: "AVANÇADO · Catálogo CJ" });
 export default CJCatalogPage;

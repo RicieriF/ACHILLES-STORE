@@ -10,6 +10,7 @@ import type { SupplierProductSource } from "@achilles/domain";
 import type SupplierDomainModuleService from "../../../../modules/supplier-domain/service";
 import { recordAudit, safeSnapshot } from "../audit";
 import { withImportLock } from "./rate-limit";
+import { identifyAssistedSource } from "./source";
 
 const ACTIVE = ["FETCHING", "PARSED", "NEEDS_REVIEW"];
 export async function createOrReuseDraft(
@@ -17,6 +18,9 @@ export async function createOrReuseDraft(
   sourceUrl: string,
   actor: string | null,
 ) {
+  const assisted = identifyAssistedSource(sourceUrl);
+  if (assisted.provider !== "ALIBABA")
+    return createOrReuseAssistedDraft(service, assisted, sourceUrl, actor);
   const connector = new AlibabaConnector(parseFeatureFlags(process.env));
   const reference = await connector.resolveProductUrl(sourceUrl);
   const canonical = reference.sourceUrl;
@@ -79,6 +83,62 @@ export async function createOrReuseDraft(
     return { draft, reused: false };
   }
   return { draft: await processDraft(service, draft.id, actor), reused: false };
+}
+
+async function createOrReuseAssistedDraft(
+  service: SupplierDomainModuleService,
+  source: ReturnType<typeof identifyAssistedSource>,
+  sourceUrl: string,
+  actor: string | null,
+) {
+  const existing = source.externalProductId
+    ? await service.listImportDrafts({
+        provider: source.provider,
+        supplier_product_id: source.externalProductId,
+        status: ACTIVE,
+      })
+    : await service.listImportDrafts({
+        canonical_source_url: source.canonicalUrl,
+        status: ACTIVE,
+      });
+  if (existing[0]) return { draft: existing[0], reused: true };
+  const draft = await service.createImportDrafts({
+    provider: source.provider,
+    source_url: sourceUrl,
+    canonical_source_url: source.canonicalUrl,
+    supplier_product_id: source.externalProductId,
+    status: "NEEDS_REVIEW",
+    media: { items: [] },
+    specifications: {},
+    variants: { items: [] },
+    alerts: {
+      items: ["Importação assistida: complete e revise os dados do produto."],
+    },
+    compliance_status: "REVIEW_REQUIRED",
+    created_by: actor,
+  });
+  await recordAudit(service, {
+    action: "ASSISTED_IMPORT_DRAFT_CREATED",
+    entityType: "import_draft",
+    entityId: draft.id,
+    actorId: actor,
+    summary: `Draft assistido ${source.provider} criado`,
+    after: safeSnapshot(draft),
+  });
+  await service.createImportAttempts({
+    import_draft_id: draft.id,
+    source_url: sourceUrl,
+    canonical_url: source.canonicalUrl,
+    provider: source.provider,
+    result: "MANUAL_REVIEW",
+    method: "MANUAL",
+    essential_data: { supplier_product_id: source.externalProductId },
+    error_code: null,
+    error_message: null,
+    parser_version: "none",
+    normalizer_version: NORMALIZER_VERSION,
+  });
+  return { draft, reused: false };
 }
 
 export async function processDraft(

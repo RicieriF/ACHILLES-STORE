@@ -13,26 +13,6 @@ import {
 } from "../../lib/operations";
 import { sdk } from "../../lib/sdk";
 
-const metricLabels: Array<[keyof DashboardData["today"], string]> = [
-  ["sales", "Vendas hoje"],
-  ["orders", "Pedidos hoje"],
-  ["averageTicket", "Ticket médio"],
-  ["estimatedProfit", "Lucro estimado"],
-  ["pendingPayments", "Pagamentos pendentes"],
-  ["awaitingSupplier", "Aguardando fornecedor"],
-  ["exceptions", "Exceções abertas"],
-];
-const catalogLabels: Array<[keyof DashboardData["catalog"], string]> = [
-  ["total", "Total"],
-  ["published", "Publicados"],
-  ["drafts", "Rascunhos"],
-  ["withoutPrice", "Sem preço"],
-  ["withoutStock", "Sem estoque"],
-  ["withoutSupplier", "Sem fornecedor"],
-  ["compliancePending", "Compliance pendente"],
-  ["blocked", "Bloqueados"],
-];
-
 const AchillesHome = () => {
   const query = useQuery({
     queryKey: ["achilles-operations-dashboard"],
@@ -47,41 +27,43 @@ const AchillesHome = () => {
       <Container>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <Heading level="h1">Central de Operações Dropshipping</Heading>
+            <Heading level="h1">Início</Heading>
             <Text className="mt-1 text-ui-fg-subtle">
-              Situação real do catálogo, fornecedores e pedidos. Valores
-              ausentes permanecem explícitos.
+              O essencial para importar, publicar e acompanhar suas vendas.
             </Text>
           </div>
           <div className="flex flex-wrap gap-2">
             <a href="/app/achilles-catalog">
-              <Button>Novo produto</Button>
+              <Button>NOVO PRODUTO</Button>
             </a>
             <a href="/app/achilles-imports">
-              <Button variant="secondary">Importar por URL</Button>
+              <Button variant="secondary">IMPORTAR PRODUTO</Button>
             </a>
-            <a href="/app/achilles-suppliers">
-              <Button variant="secondary">Fornecedores</Button>
+            <a href="/app/achilles-orders">
+              <Button variant="secondary">VER PEDIDOS</Button>
             </a>
           </div>
         </div>
       </Container>
       <Container>
-        <Heading level="h2">Hoje</Heading>
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-          {metricLabels.map(([key, label]) => (
-            <div className="rounded-lg border p-3" key={key}>
+        <Heading level="h2">Resumo</Heading>
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {[
+            ["Produtos publicados", data.catalog.published],
+            ["Rascunhos", data.catalog.drafts],
+            ["Pedidos novos", data.today.orders],
+            ["Pedidos pendentes", data.today.awaitingSupplier],
+            ["Vendas", money(data.today.sales)],
+            ["Precisam de atenção", data.alerts.length],
+          ].map(([label, value]) => (
+            <div className="rounded-lg border p-3" key={label}>
               <Text className="text-ui-fg-subtle">{label}</Text>
-              <Text className="mt-1 text-xl font-semibold">
-                {["sales", "averageTicket", "estimatedProfit"].includes(key)
-                  ? money(data.today[key])
-                  : data.today[key]}
-              </Text>
+              <Text className="mt-1 text-xl font-semibold">{value}</Text>
             </div>
           ))}
         </div>
       </Container>
-      <div className="grid gap-3 xl:grid-cols-2">
+      <div className="grid gap-3">
         <Container>
           <div className="flex items-center justify-between">
             <Heading level="h2">Catálogo</Heading>
@@ -89,46 +71,11 @@ const AchillesHome = () => {
               Abrir catálogo
             </a>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-            {catalogLabels.map(([key, label]) => (
-              <div className="rounded border p-3" key={key}>
-                <Text className="text-ui-fg-subtle">{label}</Text>
-                <Text className="text-lg font-semibold">
-                  {data.catalog[key]}
-                </Text>
-              </div>
-            ))}
-          </div>
-        </Container>
-        <Container>
-          <Heading level="h2">Fornecedores</Heading>
-          <div className="mt-4 grid gap-2">
-            {data.providers.map((provider) => (
-              <div
-                className="flex items-center justify-between rounded border p-3"
-                key={provider.provider}
-              >
-                <div>
-                  <Text className="font-medium">{provider.provider}</Text>
-                  <Text className="text-ui-fg-subtle">
-                    {provider.products} produtos · {provider.offers} ofertas ·{" "}
-                    {provider.problems} problemas
-                  </Text>
-                </div>
-                <Badge
-                  color={
-                    provider.health === "HEALTHY"
-                      ? "green"
-                      : provider.health === "DISABLED"
-                        ? "grey"
-                        : "orange"
-                  }
-                >
-                  {provider.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
+          <Text className="mt-3 text-ui-fg-subtle">
+            {data.catalog.withoutPrice} sem preço ·{" "}
+            {data.catalog.withoutSupplier} sem fornecedor ·{" "}
+            {data.catalog.compliancePending} pendentes de revisão
+          </Text>
         </Container>
       </div>
       <Container>
@@ -161,5 +108,5 @@ const AchillesHome = () => {
   );
 };
 
-export const config = defineRouteConfig({ label: "VISÃO GERAL · Operações" });
+export const config = defineRouteConfig({ label: "INÍCIO" });
 export default AchillesHome;

@@ -61,5 +61,5 @@ const ExtensionsPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "SISTEMA · Extensões" });
+export const config = defineRouteConfig({ label: "AVANÇADO · Extensões" });
 export default ExtensionsPage;

@@ -44,6 +44,7 @@ const ImportsPage = () => {
   const [price, setPrice] = useState("");
   const [moq, setMoq] = useState("");
   const [category, setCategory] = useState("");
+  const [images, setImages] = useState("");
   const list = useQuery({
     queryKey: ["achilles-imports"],
     queryFn: () => sdk.client.fetch<List>("/admin/achilles/imports"),
@@ -58,6 +59,7 @@ const ImportsPage = () => {
     setPrice(draft.source_price_min ?? "");
     setMoq(draft.moq?.toString() ?? "");
     setCategory(draft.category_suggested ?? "");
+    setImages(draft.media.items.join(", "));
   };
   const create = useMutation({
     mutationFn: () =>
@@ -102,6 +104,10 @@ const ImportsPage = () => {
             source_price_min: price || null,
             moq: moq ? Number(moq) : null,
             category_suggested: category || null,
+            media: images
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean),
           },
         },
       ),
@@ -137,15 +143,33 @@ const ImportsPage = () => {
   return (
     <div className="flex flex-col gap-4">
       <Container>
-        <Heading level="h1">Importações Alibaba</Heading>
+        <Heading level="h1">ACHILLES · Importar produto</Heading>
         <Text className="mt-2 text-ui-fg-subtle">
-          Cria somente um ImportDraft revisável. Não publica produto, cria
-          oferta, compra ou paga fornecedor.
+          Encontre no CJ ou cole uma URL externa. Todo produto nasce como
+          rascunho e exige revisão antes de publicar.
         </Text>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded border p-4">
+            <Heading level="h2">CJdropshipping</Heading>
+            <Text className="text-ui-fg-subtle">
+              Busque produtos, veja variantes e importe os dados disponíveis.
+            </Text>
+            <a href="/app/achilles-cj-catalog">
+              <Button className="mt-3">BUSCAR PRODUTOS</Button>
+            </a>
+          </div>
+          <div className="rounded border p-4">
+            <Heading level="h2">URL externa</Heading>
+            <Text className="text-ui-fg-subtle">
+              Alibaba, AliExpress ou outro fornecedor HTTPS. Sem scraping:
+              complete somente o que faltar.
+            </Text>
+          </div>
+        </div>
         <div className="mt-4 flex gap-2">
           <Input
-            aria-label="URL Alibaba"
-            placeholder="https://www.alibaba.com/product-detail/..."
+            aria-label="URL do fornecedor"
+            placeholder="Cole a URL do produto"
             value={url}
             onChange={(event) => {
               setUrl(event.target.value);
@@ -157,11 +181,11 @@ const ImportsPage = () => {
             }}
             disabled={!url || create.isPending}
           >
-            + Importar produto
+            CONTINUAR
           </Button>
         </div>
         {create.isError && (
-          <ErrorState message="Verifique URL, HTTPS e host Alibaba permitido." />
+          <ErrorState message="Use uma URL HTTPS válida do produto. Endereços locais e URLs com credenciais são bloqueados." />
         )}
       </Container>
       {list.isPending ? (
@@ -171,7 +195,7 @@ const ImportsPage = () => {
       ) : !list.data.drafts.length ? (
         <Container>
           <Text>
-            Nenhum draft. Cole uma URL Alibaba para iniciar em modo seguro.
+            Nenhum rascunho de importação. Busque no CJ ou cole uma URL externa.
           </Text>
         </Container>
       ) : (
@@ -188,7 +212,12 @@ const ImportsPage = () => {
                   {draft.canonical_source_url}
                 </Text>
                 <Text className="text-ui-fg-subtle">
-                  {draft.provider} · {draft.source_currency || "moeda pendente"}{" "}
+                  {draft.provider === "ALIEXPRESS"
+                    ? "AliExpress"
+                    : draft.provider === "ALIBABA"
+                      ? "Alibaba"
+                      : "Outro fornecedor"}{" "}
+                  · {draft.source_currency || "moeda pendente"}{" "}
                   {draft.source_price_min || "preço pendente"} · MOQ{" "}
                   {draft.moq ?? "pendente"}
                 </Text>
@@ -203,7 +232,11 @@ const ImportsPage = () => {
                         : "green"
                   }
                 >
-                  {draft.compliance_status}
+                  {draft.compliance_status === "CLEAR"
+                    ? "Sem bloqueio identificado"
+                    : draft.compliance_status === "REVIEW_REQUIRED"
+                      ? "Pendente de revisão"
+                      : "Bloqueado"}
                 </Badge>
                 <Badge>{labels[draft.status]}</Badge>
                 <Button
@@ -292,9 +325,19 @@ const ImportsPage = () => {
                 }}
               />
             </label>
+            <label className="col-span-2">
+              <Text>Fotos (URLs separadas por vírgula)</Text>
+              <Input
+                value={images}
+                onChange={(event) => {
+                  setImages(event.target.value);
+                }}
+                placeholder="https://.../foto.jpg"
+              />
+            </label>
           </div>
           <Text className="mt-3">
-            Imagens/referências: {selected.media.items.length} · Variantes:{" "}
+            Fotos: {selected.media.items.length} · Variantes:{" "}
             {selected.variants.items.length} · Especificações:{" "}
             {Object.keys(selected.specifications).length}
           </Text>
@@ -339,14 +382,14 @@ const ImportsPage = () => {
             </Button>
           </div>
           <Text className="mt-3 text-ui-fg-subtle">
-            Aprovação significa apenas dados liberados para a TASK 005; nenhum
-            produto fica vendável.
+            Aprovar libera apenas a criação do produto interno como rascunho.
+            Nenhum item é publicado automaticamente.
           </Text>
           {selected.converted_product_id ? (
             <div className="mt-4 rounded border p-3">
               <Text weight="plus">Produto interno criado</Text>
-              <Text>ID: {selected.converted_product_id}</Text>
               <Text>Preço de venda: ainda não definido</Text>
+              <Text>Margem ainda não calculável.</Text>
               <a
                 className="text-ui-fg-interactive"
                 href={`/app/products/${selected.converted_product_id}`}
@@ -383,5 +426,5 @@ const ImportsPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "ACHILLES · Importações" });
+export const config = defineRouteConfig({ label: "IMPORTAR · Produto" });
 export default ImportsPage;

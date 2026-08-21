@@ -75,12 +75,18 @@ const ProductCard = ({
   product,
   edit,
   duplicate,
+  remove,
+  archive,
+  publish,
   selected,
   select,
 }: {
   product: OperationalProduct;
   edit: (product: OperationalProduct) => void;
   duplicate: (id: string) => void;
+  remove: (product: OperationalProduct) => void;
+  archive: (product: OperationalProduct) => void;
+  publish: (product: OperationalProduct) => void;
   selected: boolean;
   select: (id: string) => void;
 }) => (
@@ -150,6 +156,15 @@ const ProductCard = ({
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
+        {product.status === "draft" && (
+          <Button
+            onClick={() => {
+              publish(product);
+            }}
+          >
+            Publicar
+          </Button>
+        )}
         <Button
           variant="secondary"
           onClick={() => {
@@ -169,6 +184,25 @@ const ProductCard = ({
         >
           Duplicar
         </Button>
+        {product.status === "draft" ? (
+          <Button
+            variant="danger"
+            onClick={() => {
+              remove(product);
+            }}
+          >
+            Excluir produto
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              archive(product);
+            }}
+          >
+            Arquivar produto
+          </Button>
+        )}
         {product.origin && (
           <a href={product.origin} rel="noreferrer" target="_blank">
             <Button variant="secondary">Origem</Button>
@@ -921,6 +955,8 @@ const CatalogPage = () => {
   const [creating, setCreating] = useState(false);
   const [draftCreated, setDraftCreated] = useState(false);
   const [editing, setEditing] = useState<OperationalProduct | null>(null);
+  const [pendingDeletion, setPendingDeletion] =
+    useState<OperationalProduct | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const query = useQuery({
     queryKey: ["achilles-catalog", q, offset],
@@ -938,6 +974,52 @@ const CatalogPage = () => {
       }),
     onSuccess: refresh,
   });
+  const lifecycle = useMutation({
+    mutationFn: ({
+      id,
+      action,
+    }: {
+      id: string;
+      action: "DELETE" | "ARCHIVE";
+    }) =>
+      sdk.client.fetch(
+        `/admin/achilles/operations/products/${id}${action === "ARCHIVE" ? "/archive" : ""}`,
+        { method: action === "ARCHIVE" ? "POST" : "DELETE" },
+      ),
+    onSuccess: refresh,
+    onError: (error) => {
+      window.alert(
+        `${adminErrorMessage(error)} Use “Arquivar produto” quando houver histórico ou vínculos.`,
+      );
+    },
+  });
+  const remove = (product: OperationalProduct) => {
+    setPendingDeletion(product);
+  };
+  const archive = (product: OperationalProduct) => {
+    if (
+      window.confirm(
+        `Arquivar "${product.title}"? O produto será retirado de venda e o histórico será preservado.`,
+      )
+    )
+      lifecycle.mutate({ id: product.id, action: "ARCHIVE" });
+  };
+  const publication = useMutation({
+    mutationFn: (id: string) =>
+      sdk.client.fetch(`/admin/products/${id}`, {
+        method: "POST",
+        body: { status: "published" },
+      }),
+    onSuccess: refresh,
+    onError: (error) => {
+      window.alert(
+        `${adminErrorMessage(error)} Ainda não pode ser publicado: verifique preço, compliance e fornecedor.`,
+      );
+    },
+  });
+  const publish = (product: OperationalProduct) => {
+    publication.mutate(product.id);
+  };
   const bulk = useMutation({
     mutationFn: (action: "FEATURE" | "UNFEATURE" | "DEACTIVATE") =>
       sdk.client.fetch("/admin/achilles/operations/products/bulk", {
@@ -1089,6 +1171,9 @@ const CatalogPage = () => {
               duplicate={(id) => {
                 duplicate.mutate(id);
               }}
+              remove={remove}
+              archive={archive}
+              publish={publish}
               edit={setEditing}
               key={product.id}
               product={product}
@@ -1143,6 +1228,15 @@ const CatalogPage = () => {
                     </td>
                     <td className="p-2">{product.stock ?? "Não informado"}</td>
                     <td className="flex gap-1 p-2">
+                      {product.status === "draft" && (
+                        <Button
+                          onClick={() => {
+                            publish(product);
+                          }}
+                        >
+                          Publicar
+                        </Button>
+                      )}
                       <Button
                         variant="secondary"
                         onClick={() => {
@@ -1159,6 +1253,25 @@ const CatalogPage = () => {
                       >
                         Duplicar
                       </Button>
+                      {product.status === "draft" ? (
+                        <Button
+                          variant="danger"
+                          onClick={() => {
+                            remove(product);
+                          }}
+                        >
+                          Excluir
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            archive(product);
+                          }}
+                        >
+                          Arquivar
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1212,9 +1325,47 @@ const CatalogPage = () => {
           product={editing}
         />
       )}{" "}
+      {pendingDeletion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            aria-modal="true"
+            className="w-full max-w-md rounded-lg bg-ui-bg-base p-6 shadow-elevation-modal"
+            role="dialog"
+          >
+            <Heading level="h2">Excluir “{pendingDeletion.title}”?</Heading>
+            <Text className="mt-3">Esta ação não poderá ser desfeita.</Text>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setPendingDeletion(null);
+                }}
+              >
+                CANCELAR
+              </Button>
+              <Button
+                disabled={lifecycle.isPending}
+                variant="danger"
+                onClick={() => {
+                  lifecycle.mutate(
+                    { id: pendingDeletion.id, action: "DELETE" },
+                    {
+                      onSuccess: () => {
+                        setPendingDeletion(null);
+                      },
+                    },
+                  );
+                }}
+              >
+                EXCLUIR PRODUTO
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export const config = defineRouteConfig({ label: "CATÁLOGO · Comercial" });
+export const config = defineRouteConfig({ label: "PRODUTOS" });
 export default CatalogPage;

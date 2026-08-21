@@ -1,9 +1,16 @@
 import type { MedusaResponse } from "@medusajs/framework/http";
 import { Modules, ProductStatus } from "@medusajs/framework/utils";
 import {
+  deleteProductsWorkflow,
   updateProductsWorkflow,
   updateProductVariantsWorkflow,
 } from "@medusajs/medusa/core-flows";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import {
+  productDeletionDecision,
+  type ProductDeletionFacts,
+} from "../../../../../../admin-operations/product-lifecycle";
+import type { OperationsDatabase } from "../../../../../../admin-operations/service";
 import { SUPPLIER_DOMAIN_MODULE } from "../../../../../../modules/supplier-domain";
 import type SupplierDomainModuleService from "../../../../../../modules/supplier-domain/service";
 import { recordAudit, safeSnapshot } from "../../../audit";
@@ -115,4 +122,61 @@ export async function POST(
     after: safeSnapshot(result[0] ?? { id: current.id }),
   });
   response.json({ product: result[0] });
+}
+
+export async function DELETE(
+  request: AdminRequest,
+  response: MedusaResponse,
+): Promise<void> {
+  const productId = request.params.id;
+  if (!productId) {
+    notFound(response, "Produto");
+    return;
+  }
+  const database = request.scope.resolve<OperationsDatabase>(
+    ContainerRegistrationKeys.PG_CONNECTION,
+  );
+  const result = await database.raw<ProductDeletionFacts>(
+    `select p.status,
+    (select count(*)::int from supplier_offer where product_id = p.id and deleted_at is null) offers,
+    (select count(*)::int from order_line_item where product_id = p.id and deleted_at is null) "orderLines",
+    (select count(*)::int from cart_line_item where product_id = p.id and deleted_at is null) "cartLines",
+    (select count(*)::int from shipping_quote where product_id = p.id and deleted_at is null) "shippingQuotes",
+    (select count(*)::int from supplier_routing_decision where product_id = p.id and deleted_at is null) "routingDecisions"
+    from product p where p.id = ? and p.deleted_at is null limit 1`,
+    [productId],
+  );
+  const facts = result.rows[0];
+  if (!facts) {
+    notFound(response, "Produto");
+    return;
+  }
+  const decision = productDeletionDecision(facts);
+  if (!decision.allowed) {
+    response.status(409).json({
+      code: "PRODUCT_DELETE_BLOCKED",
+      message: "Este produto não pode ser excluído com segurança.",
+      reasons: decision.reasons,
+      archiveRecommended: true,
+    });
+    return;
+  }
+  const domain = request.scope.resolve<SupplierDomainModuleService>(
+    SUPPLIER_DOMAIN_MODULE,
+  );
+  const policies = await domain.listProductPolicies({ product_id: productId });
+  if (policies.length)
+    await domain.deleteProductPolicies(policies.map((policy) => policy.id));
+  await deleteProductsWorkflow(request.scope).run({
+    input: { ids: [productId] },
+  });
+  await recordAudit(domain, {
+    action: "ADMIN_PRODUCT_DELETED",
+    entityType: "product",
+    entityId: productId,
+    actorId: actorId(request),
+    summary: "Rascunho sem vínculos excluído pelo operador",
+    metadata: { safe_delete: true },
+  });
+  response.json({ deleted: true, productId });
 }

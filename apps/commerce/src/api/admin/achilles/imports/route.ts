@@ -4,6 +4,7 @@ import { SUPPLIER_DOMAIN_MODULE } from "../../../../modules/supplier-domain";
 import type SupplierDomainModuleService from "../../../../modules/supplier-domain/service";
 import { actorId, parseOrReply, type AdminRequest } from "../http";
 import { createOrReuseDraft } from "./importer";
+import { AssistedSourceError } from "./source";
 import { createImportInput, importListInput } from "./schemas";
 
 export async function GET(
@@ -38,7 +39,10 @@ export async function POST(
     );
     response.status(result.reused ? 200 : 201).json(result);
   } catch (error) {
-    if (error instanceof AlibabaUrlError) {
+    if (
+      error instanceof AlibabaUrlError ||
+      error instanceof AssistedSourceError
+    ) {
       response.status(400).json({ code: error.code, message: error.message });
       return;
     }
