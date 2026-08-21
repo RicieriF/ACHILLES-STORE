@@ -8,8 +8,16 @@ import {
 } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
+const task15ArtifactDirectory = `artifacts/task-015/run-${String(process.pid)}`;
+mkdirSync(task15ArtifactDirectory, { recursive: true });
+const evidenceDirectory = `artifacts/e2e-run-${String(process.pid)}`;
+mkdirSync(evidenceDirectory, { recursive: true });
+const evidencePath = (path: string) =>
+  `${evidenceDirectory}/${path.replaceAll(/[\\/]/g, "-")}`;
 
-test("public journey reaches a real Medusa cart", async ({ page }) => {
+test("public journey reaches a real Medusa cart", async ({
+  page,
+}, testInfo) => {
   mkdirSync("artifacts/task-015", { recursive: true });
   const catalogReady = await page.request.get(
     "http://localhost:9000/achilles/store/catalog",
@@ -52,7 +60,7 @@ test("public journey reaches a real Medusa cart", async ({ page }) => {
   const cart = page.getByRole("dialog", { name: "Sua mochila" });
   await expect(cart).toBeVisible();
   await expect(cart.getByText("R$ 149,00").last()).toBeVisible();
-  await page.screenshot({ path: "artifacts/task-015/cart.png" });
+  await page.screenshot({ path: testInfo.outputPath("cart.png") });
   await cart.getByRole("button", { name: "Aumentar quantidade" }).click();
   await expect(cart.getByRole("status", { name: "" })).toHaveText("2");
   await expect(cart.getByText("R$ 298,00")).toBeVisible();
@@ -193,78 +201,80 @@ test("TASK 013 visual evidence at desktop and mobile breakpoints", async ({
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await page.screenshot({
-    path: "artifacts/task-013/01-home-desktop.png",
+    path: evidencePath("artifacts/task-013/01-home-desktop.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/home-1440.png",
+    path: `${task15ArtifactDirectory}/home-1440.png`,
     fullPage: true,
   });
   await page.locator("header.site-header").screenshot({
-    path: "artifacts/task-015/header-1440.png",
+    path: `${task15ArtifactDirectory}/header-1440.png`,
   });
   await page.screenshot({
-    path: "artifacts/task-013/02-hero-header-desktop.png",
+    path: evidencePath("artifacts/task-013/02-hero-header-desktop.png"),
   });
   await page.goto("/categoria/lanternas");
   await page.screenshot({
-    path: "artifacts/task-013/03-lanternas-desktop.png",
+    path: evidencePath("artifacts/task-013/03-lanternas-desktop.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/lanternas.png",
+    path: `${task15ArtifactDirectory}/lanternas.png`,
     fullPage: true,
   });
   await page.locator("article").first().getByRole("link").first().click();
   await page.screenshot({
-    path: "artifacts/task-013/04-product-desktop.png",
+    path: evidencePath("artifacts/task-013/04-product-desktop.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/product.png",
+    path: `${task15ArtifactDirectory}/product.png`,
     fullPage: true,
   });
   await page.goto("/categoria/edc");
   await page.screenshot({
-    path: "artifacts/task-013/05-edc-empty.png",
+    path: evidencePath("artifacts/task-013/05-edc-empty.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/edc-empty.png",
+    path: `${task15ArtifactDirectory}/edc-empty.png`,
     fullPage: true,
   });
   await page.goto("/categoria/cutelaria");
   await page.screenshot({
-    path: "artifacts/task-013/06-cutelaria-compliance.png",
+    path: evidencePath("artifacts/task-013/06-cutelaria-compliance.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/cutelaria-restricted.png",
+    path: `${task15ArtifactDirectory}/cutelaria-restricted.png`,
     fullPage: true,
   });
   await page.goto("/buscar?q=lanterna");
   await page.screenshot({
-    path: "artifacts/task-013/07-search-desktop.png",
+    path: evidencePath("artifacts/task-013/07-search-desktop.png"),
     fullPage: true,
   });
   await page.goto("/institucional/sobre");
   await page.screenshot({
-    path: "artifacts/task-013/08-sobre-desktop.png",
+    path: evidencePath("artifacts/task-013/08-sobre-desktop.png"),
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.screenshot({
-    path: "artifacts/task-013/09-home-mobile.png",
+    path: evidencePath("artifacts/task-013/09-home-mobile.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/home-390.png",
+    path: `${task15ArtifactDirectory}/home-390.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Abrir menu" }).click();
-  await page.screenshot({ path: "artifacts/task-013/10-menu-mobile.png" });
-  await page.screenshot({ path: "artifacts/task-015/menu-mobile.png" });
+  await page.screenshot({
+    path: evidencePath("artifacts/task-013/10-menu-mobile.png"),
+  });
+  await page.screenshot({ path: `${task15ArtifactDirectory}/menu-mobile.png` });
 });
 
 test("official brand assets adapt between desktop and mobile", async ({
@@ -319,11 +329,11 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
     content: ".skip-link { display: none !important; }",
   });
   await page.screenshot({
-    path: "artifacts/task-010/checkout-contato-1440.png",
+    path: evidencePath("artifacts/task-010/checkout-contato-1440.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/checkout.png",
+    path: `${task15ArtifactDirectory}/checkout.png`,
     fullPage: true,
   });
   await page.getByLabel("Nome completo").fill("Maria da Silva");
@@ -337,7 +347,7 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
   ).toBeVisible();
   await page.locator("#checkout-step-heading").focus();
   await page.screenshot({
-    path: "artifacts/task-010/checkout-endereco-390.png",
+    path: evidencePath("artifacts/task-010/checkout-endereco-390.png"),
     fullPage: true,
   });
   await page.locator("#postal-code").fill("01310-100");
@@ -353,7 +363,7 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
   ).toBeVisible();
   await page.locator("#checkout-step-heading").focus();
   await page.screenshot({
-    path: "artifacts/task-010/frete-390.png",
+    path: evidencePath("artifacts/task-010/frete-390.png"),
     fullPage: true,
   });
   await page.getByRole("radio", { name: /Entrega Econômica/ }).click();
@@ -412,13 +422,13 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
   await page.getByRole("button", { name: "Revisar pedido" }).click();
   await expect(page.getByText("Incluídos na entrega DDP")).toBeVisible();
   await page.screenshot({
-    path: "artifacts/task-010/revisao-390.png",
+    path: evidencePath("artifacts/task-010/revisao-390.png"),
     fullPage: true,
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.locator("#checkout-step-heading").focus();
   await page.screenshot({
-    path: "artifacts/task-010/revisao-1440.png",
+    path: evidencePath("artifacts/task-010/revisao-1440.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Continuar para pagamento" }).click();
@@ -432,7 +442,7 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
   ).toBeVisible();
   await page.locator("#checkout-step-heading").focus();
   await page.screenshot({
-    path: "artifacts/task-010/ready-for-payment.png",
+    path: evidencePath("artifacts/task-010/ready-for-payment.png"),
     fullPage: true,
   });
   await page.getByRole("link", { name: "Ir para pagamento" }).click();
@@ -509,7 +519,7 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
     page.getByRole("link", { name: "Acompanhar pedido" }),
   ).toHaveAttribute("href", /\/pedido\/ACH-\d{4}-\d{6,}\?token=/);
   await page.screenshot({
-    path: "artifacts/task-015/confirmation.png",
+    path: `${task15ArtifactDirectory}/confirmation.png`,
     fullPage: true,
   });
 });
@@ -553,23 +563,23 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
   ).toBeVisible({ timeout: 20_000 });
   await page.getByText(paid.reference).click();
   await expect(
-    page.getByRole("heading", { name: "Supplier Order Gate" }),
+    page.getByRole("heading", { name: "Validação do fornecedor" }),
   ).toBeVisible();
   await page.screenshot({
-    path: "artifacts/task-012/admin-orders.png",
+    path: evidencePath("artifacts/task-012/admin-orders.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-012/order-detail.png",
+    path: evidencePath("artifacts/task-012/order-detail.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-012/supplier-order-gate.png",
+    path: evidencePath("artifacts/task-012/supplier-order-gate.png"),
     fullPage: true,
   });
   await page.getByRole("checkbox").check();
   await page.screenshot({
-    path: "artifacts/task-012/approval-confirmation.png",
+    path: evidencePath("artifacts/task-012/approval-confirmation.png"),
     fullPage: true,
   });
   await page
@@ -577,9 +587,10 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
     .click();
   await expect(page.getByText("APPROVED").first()).toBeVisible();
   await page.getByRole("button", { name: "CRIAR PEDIDO TEST/SANDBOX" }).click();
+  await page.getByText("Detalhes avançados e auditoria").click();
   await expect(page.getByText(/ACHILLES TEST LOGISTICS/)).toBeVisible();
   await page.screenshot({
-    path: "artifacts/task-012/sandbox-fulfillment.png",
+    path: evidencePath("artifacts/task-012/sandbox-fulfillment.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "MARCAR TEST SHIPPED" }).click();
@@ -595,20 +606,20 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
     /Alibaba|CJ|SupplierOffer|margem|custo do fornecedor/i,
   );
   await page.screenshot({
-    path: "artifacts/task-012/customer-order.png",
+    path: evidencePath("artifacts/task-012/customer-order.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/customer-order.png",
+    path: `${task15ArtifactDirectory}/customer-order.png`,
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
-    path: "artifacts/task-012/tracking-mobile.png",
+    path: evidencePath("artifacts/task-012/tracking-mobile.png"),
     fullPage: true,
   });
   await page.screenshot({
-    path: "artifacts/task-015/tracking.png",
+    path: `${task15ArtifactDirectory}/tracking.png`,
     fullPage: true,
   });
 });
@@ -783,7 +794,7 @@ test("multi-shipment fixture is explicit and contains no supplier data", async (
     /Alibaba|SupplierOffer|CJdropshipping/,
   );
   await page.screenshot({
-    path: "artifacts/task-010/multi-shipment.png",
+    path: evidencePath("artifacts/task-010/multi-shipment.png"),
     fullPage: true,
   });
 });
@@ -1144,7 +1155,7 @@ test("TASK 012 cenário B: aumento de custo bloqueia execução e aparece no Adm
       page.getByText("Custo do fornecedor mudou desde a venda."),
     ).toBeVisible();
     await page.screenshot({
-      path: "artifacts/task-012/exception-state.png",
+      path: evidencePath("artifacts/task-012/exception-state.png"),
       fullPage: true,
     });
   } finally {
@@ -1206,30 +1217,30 @@ test("TASK 014 staging-like mantém fluxo público e expõe Integration Hub aute
   await expect(page.getByTestId("integration-hub")).toBeVisible();
   await expect(page.getByTestId("integration-cj")).toContainText("CONFIGURED");
   await page.screenshot({
-    path: "artifacts/task-014/integration-hub.png",
+    path: evidencePath("artifacts/task-014/integration-hub.png"),
     fullPage: true,
   });
   await page.getByTestId("health-dashboard").screenshot({
-    path: "artifacts/task-014/health.png",
+    path: evidencePath("artifacts/task-014/health.png"),
   });
   await page.getByTestId("integration-mercado-pago").screenshot({
-    path: "artifacts/task-014/mercado-pago-status.png",
+    path: evidencePath("artifacts/task-014/mercado-pago-status.png"),
   });
   await page.getByTestId("integration-cj").screenshot({
-    path: "artifacts/task-014/cj-status.png",
+    path: evidencePath("artifacts/task-014/cj-status.png"),
   });
 
   await page.goto("http://localhost:9000/app/achilles-settings");
   await expect(page.getByTestId("settings-page")).toBeVisible();
   await page.screenshot({
-    path: "artifacts/task-014/settings.png",
+    path: evidencePath("artifacts/task-014/settings.png"),
     fullPage: true,
   });
 
   await page.goto("http://localhost:9000/app/achilles-brazil-stock");
   await expect(page.getByTestId("brazil-stock-page")).toBeVisible();
   await page.screenshot({
-    path: "artifacts/task-014/brazil-stock.png",
+    path: evidencePath("artifacts/task-014/brazil-stock.png"),
     fullPage: true,
   });
 
@@ -1237,7 +1248,7 @@ test("TASK 014 staging-like mantém fluxo público e expõe Integration Hub aute
   await page.goto("http://localhost:3000");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.screenshot({
-    path: "artifacts/task-014/mobile-storefront-staging.png",
+    path: evidencePath("artifacts/task-014/mobile-storefront-staging.png"),
     fullPage: true,
   });
 });

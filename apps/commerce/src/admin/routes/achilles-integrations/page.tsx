@@ -117,5 +117,5 @@ const IntegrationsPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "ACHILLES · Integrações" });
+export const config = defineRouteConfig({ label: "AVANÇADO · Integrações" });
 export default IntegrationsPage;

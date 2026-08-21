@@ -433,5 +433,5 @@ const SuppliersPage = () => {
   );
 };
 
-export const config = defineRouteConfig({ label: "ACHILLES · Fornecedores" });
+export const config = defineRouteConfig({ label: "AVANÇADO · Fornecedores" });
 export default SuppliersPage;

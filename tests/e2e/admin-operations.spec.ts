@@ -131,6 +131,75 @@ test("Supplier Hub consulta fixture CJ e salva produto como DRAFT", async ({
     product: { status: "draft" },
     isPrimary: false,
   });
+  const duplicate = await request.post(
+    `${commerceUrl}/admin/achilles/integrations/cj/import`,
+    {
+      headers,
+      data: {
+        pid: `CJ-FIXTURE-${cjImportId}`,
+        title: `[E2E] Fixture CJ EDC Organizer ${cjImportId}`,
+        images: [],
+        sourceUrl: "https://fixture.invalid/product/CJ-FIXTURE-001",
+        currency: "USD",
+        sourceCost: "12.50",
+        variants: [
+          {
+            vid: "CJ-FIXTURE-VID",
+            sku: `CJ-FIXTURE-${cjImportId}`,
+            title: "Black",
+          },
+        ],
+      },
+    },
+  );
+  expect(duplicate.status()).toBe(409);
+  expect(await duplicate.json()).toMatchObject({
+    code: "CJ_PRODUCT_ALREADY_IMPORTED",
+  });
+});
+
+test("importação assistida reconhece URL externa, cria DRAFT e preserva a origem", async ({
+  request,
+}) => {
+  const token = await adminAuth(request);
+  const headers = { authorization: `Bearer ${token}` };
+  const externalId = Date.now().toString();
+  const sourceUrl = `https://www.aliexpress.com/item/${externalId}.html`;
+  const created = await request.post(`${commerceUrl}/admin/achilles/imports`, {
+    headers,
+    data: { source_url: sourceUrl },
+  });
+  expect(created.status()).toBe(201);
+  const createdBody = (await created.json()) as {
+    draft: { id: string; provider: string; supplier_product_id: string };
+  };
+  expect(createdBody.draft).toMatchObject({
+    provider: "ALIEXPRESS",
+    supplier_product_id: externalId,
+  });
+
+  const updated = await request.patch(
+    `${commerceUrl}/admin/achilles/imports/${createdBody.draft.id}`,
+    {
+      headers,
+      data: {
+        title_normalized: `[E2E] Produto assistido ${externalId}`,
+        source_currency: "USD",
+        source_price_min: "8.50",
+        media: ["https://example.invalid/assisted-product.png"],
+      },
+    },
+  );
+  expect(updated.status()).toBe(200);
+  expect(await updated.json()).toMatchObject({
+    draft: {
+      provider: "ALIEXPRESS",
+      canonical_source_url: sourceUrl,
+      status: "NEEDS_REVIEW",
+      compliance_status: "REVIEW_REQUIRED",
+      title_normalized: `[E2E] Produto assistido ${externalId}`,
+    },
+  });
 });
 
 test("Alibaba fixture valida APIs oficiais sem fingir conexão real", async ({
@@ -215,8 +284,9 @@ test("Admin dropshipping operations center uses real operational data", async ({
   await page.setExtraHTTPHeaders(headers);
   await page.goto(`${commerceUrl}/app/achilles`);
   await expect(page.getByTestId("operations-dashboard")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Início" })).toBeVisible();
   await expect(
-    page.getByText("Central de Operações Dropshipping"),
+    page.getByRole("link", { name: "IMPORTAR PRODUTO" }),
   ).toBeVisible();
   await page.screenshot({
     path: `${artifactDirectory}/dashboard.png`,

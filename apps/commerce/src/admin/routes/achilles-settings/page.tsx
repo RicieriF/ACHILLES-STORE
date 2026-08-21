@@ -17,13 +17,41 @@ const SettingsPage = () => {
   });
   if (query.isPending) return <LoadingState />;
   if (query.isError) return <ErrorState message={String(query.error)} />;
+  const configured = (key: string) =>
+    query.data.secrets[key] === "Configurado ✓";
+  const groups = [
+    {
+      title: "Pagamentos",
+      ready: configured("mercadoPagoAccessToken"),
+      detail: "Mercado Pago para Pix e cartão",
+    },
+    {
+      title: "Entrega",
+      ready: true,
+      detail: String(query.data.store.defaultShippingPolicy),
+    },
+    {
+      title: "Fornecedores",
+      ready: configured("cjApiKey") || configured("alibabaAppKey"),
+      detail: "CJ, Alibaba e fornecedores manuais",
+    },
+    {
+      title: "E-mail",
+      ready: configured("resendApiKey"),
+      detail: "Notificações ao cliente",
+    },
+    {
+      title: "Arquivos",
+      ready: true,
+      detail: "Imagens e documentos do catálogo",
+    },
+  ];
   return (
     <div className="flex flex-col gap-y-3" data-testid="settings-page">
       <Container>
         <Heading level="h1">ACHILLES · Configurações</Heading>
         <Text className="mt-2 text-ui-fg-subtle">
-          Configuração operacional somente leitura via ENV/secret store.
-          Segredos nunca são editáveis nesta tela.
+          Visão simples da loja e dos serviços necessários para operar.
         </Text>
         <Badge className="mt-3" color="blue">
           {query.data.environment}
@@ -32,41 +60,54 @@ const SettingsPage = () => {
       <Container>
         <Heading level="h2">Loja</Heading>
         <div className="mt-4 grid gap-2 md:grid-cols-2">
-          {Object.entries(query.data.store).map(([key, value]) => (
-            <Text key={key}>
-              {key}: <strong>{String(value ?? "Não configurado")}</strong>
-            </Text>
-          ))}
+          <Text>
+            Nome: <strong>{String(query.data.store.name)}</strong>
+          </Text>
+          <Text>
+            Moeda: <strong>{String(query.data.store.currency)}</strong>
+          </Text>
+          <Text>
+            País: <strong>{String(query.data.store.country)}</strong>
+          </Text>
+          <Text>
+            E-mail de suporte:{" "}
+            <strong>
+              {String(query.data.store.supportEmail ?? "Não informado")}
+            </strong>
+          </Text>
+          <Text>
+            Telefone:{" "}
+            <strong>
+              {String(query.data.store.supportPhone ?? "Não informado")}
+            </strong>
+          </Text>
+          <Text>
+            Pedidos ao fornecedor: <strong>manual</strong>
+          </Text>
         </div>
       </Container>
       <Container>
-        <Heading level="h2">Segredos</Heading>
-        <div className="mt-4 grid gap-2 md:grid-cols-2">
-          {Object.entries(query.data.secrets).map(([key, value]) => (
-            <Text key={key}>
-              {key}: <strong>{value}</strong>
-            </Text>
+        <Heading level="h2">Serviços</Heading>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {groups.map((group) => (
+            <div className="rounded border p-3" key={group.title}>
+              <div className="flex items-center justify-between gap-2">
+                <Heading level="h3">{group.title}</Heading>
+                <Badge color={group.ready ? "green" : "orange"}>
+                  {group.ready ? "Disponível" : "Configuração pendente"}
+                </Badge>
+              </div>
+              <Text className="mt-1 text-ui-fg-subtle">{group.detail}</Text>
+            </div>
           ))}
         </div>
-      </Container>
-      <Container>
-        <Heading level="h2">Feature Flags</Heading>
-        <Text className="text-ui-fg-subtle">
-          Alterações exigem atualização segura do ambiente e novo deploy.
+        <Text className="mt-4 text-ui-fg-subtle">
+          Credenciais e recursos avançados são administrados em Integrações e
+          Extensões. Nenhum segredo é exibido aqui.
         </Text>
-        <div className="mt-4 grid gap-2 md:grid-cols-2">
-          {Object.entries(query.data.flags).map(([key, value]) => (
-            <Text key={key}>
-              {key}:{" "}
-              <Badge color={value ? "green" : "grey"}>
-                {value ? "ON" : "OFF"}
-              </Badge>
-            </Text>
-          ))}
-        </div>
       </Container>
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "ACHILLES · Configurações" });
+export const config = defineRouteConfig({ label: "CONFIGURAÇÕES" });
 export default SettingsPage;

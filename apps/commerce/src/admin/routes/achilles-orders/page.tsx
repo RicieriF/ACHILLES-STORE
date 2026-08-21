@@ -140,8 +140,7 @@ const OrdersPage = () => {
       <Container>
         <Heading level="h1">ACHILLES · Pedidos</Heading>
         <Text className="text-ui-fg-subtle">
-          Customer Orders Medusa com gate humano obrigatório e execução
-          exclusiva no sandbox.
+          Pedidos pagos e ações pendentes. Pedido ao fornecedor: manual.
         </Text>
       </Container>
       <Container>
@@ -219,7 +218,7 @@ const OrdersPage = () => {
               ))}
             </Container>
             <Container>
-              <Heading level="h2">Supplier Order Gate</Heading>
+              <Heading level="h2">Validação do fornecedor</Heading>
               <div className="mt-2 flex gap-2">
                 <Badge
                   color={
@@ -232,7 +231,7 @@ const OrdersPage = () => {
                 >
                   {detail.data.gate.status}
                 </Badge>
-                <Badge color="orange">SANDBOX ONLY</Badge>
+                <Badge color="orange">Operação manual</Badge>
               </div>
               {detail.data.gate.reasons.map((reason) => (
                 <Text key={reason}>{reason}</Text>
@@ -253,14 +252,12 @@ const OrdersPage = () => {
               </Text>
             </Container>
             <Container>
-              <Heading level="h2">
-                Fulfillment Groups · Fornecedor interno · Custos
-              </Heading>
+              <Heading level="h2">Fornecedor e custos</Heading>
               {detail.data.groups.map((group) => (
                 <div className="mt-3 rounded border p-3" key={group.id}>
                   <Text>
-                    <strong>{group.fulfillment_mode}</strong> · provider origem{" "}
-                    {group.provider}
+                    <strong>{group.provider}</strong> · modalidade{" "}
+                    {group.fulfillment_mode}
                   </Text>
                   <Text>
                     Produto {group.routing_snapshot.sourceCost}{" "}
@@ -373,61 +370,65 @@ const OrdersPage = () => {
                 </Button>
               </div>
               <Text className="mt-3 text-ui-fg-subtle">
-                Execução real desativada. Alibaba/CJ não recebem pedidos ou
-                pagamentos.
+                Pedido ao fornecedor: manual. Alibaba/CJ não recebem pedidos ou
+                pagamentos automaticamente.
               </Text>
               {action.isError && <ErrorState message={String(action.error)} />}
             </Container>
             <Container>
-              <Heading level="h2">
-                Supplier Orders · Tracking · Exceções · Auditoria
-              </Heading>
-              {detail.data.supplierOrders.map((order) => (
-                <Text key={order.id}>
-                  {order.id} · {order.provider} · {order.status} · sandbox{" "}
-                  {String(order.sandbox)}
-                </Text>
-              ))}
-              {detail.data.tracking.map((tracking) => (
-                <Text key={tracking.tracking_number}>
-                  {tracking.carrier} · {tracking.tracking_number} ·{" "}
-                  {tracking.status} · TEST
-                </Text>
-              ))}
-              {detail.data.exceptions.map((exception) => (
-                <div
-                  className="mt-2 flex items-center gap-2"
-                  key={exception.id}
-                >
-                  <Text>
-                    {exception.severity} · {exception.message} ·{" "}
-                    {exception.status}
+              <details>
+                <summary className="cursor-pointer font-medium">
+                  Detalhes avançados e auditoria
+                </summary>
+                {detail.data.supplierOrders.map((order) => (
+                  <Text key={order.id}>
+                    {order.id} · {order.provider} · {order.status} · sandbox{" "}
+                    {String(order.sandbox)}
                   </Text>
-                  {exception.status !== "RESOLVED" && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        action.mutate({
-                          path: `/admin/achilles/orders/${selected}/exceptions/${exception.id}`,
-                          body: {
-                            status:
-                              exception.status === "OPEN"
-                                ? "ACKNOWLEDGED"
-                                : "RESOLVED",
-                          },
-                        });
-                      }}
-                    >
-                      {exception.status === "OPEN" ? "RECONHECER" : "RESOLVER"}
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {detail.data.audit.map((event, index) => (
-                <Text key={`${event.action}-${String(index)}`}>
-                  {event.action} · {event.summary}
-                </Text>
-              ))}
+                ))}
+                {detail.data.tracking.map((tracking) => (
+                  <Text key={tracking.tracking_number}>
+                    {tracking.carrier} · {tracking.tracking_number} ·{" "}
+                    {tracking.status} · TEST
+                  </Text>
+                ))}
+                {detail.data.exceptions.map((exception) => (
+                  <div
+                    className="mt-2 flex items-center gap-2"
+                    key={exception.id}
+                  >
+                    <Text>
+                      {exception.severity} · {exception.message} ·{" "}
+                      {exception.status}
+                    </Text>
+                    {exception.status !== "RESOLVED" && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          action.mutate({
+                            path: `/admin/achilles/orders/${selected}/exceptions/${exception.id}`,
+                            body: {
+                              status:
+                                exception.status === "OPEN"
+                                  ? "ACKNOWLEDGED"
+                                  : "RESOLVED",
+                            },
+                          });
+                        }}
+                      >
+                        {exception.status === "OPEN"
+                          ? "RECONHECER"
+                          : "RESOLVER"}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {detail.data.audit.map((event, index) => (
+                  <Text key={`${event.action}-${String(index)}`}>
+                    {event.action} · {event.summary}
+                  </Text>
+                ))}
+              </details>
             </Container>
           </>
         ))}
@@ -441,5 +442,5 @@ function money(value: string, currency: string): string {
   );
 }
 
-export const config = defineRouteConfig({ label: "ACHILLES · Pedidos" });
+export const config = defineRouteConfig({ label: "PEDIDOS" });
 export default OrdersPage;
