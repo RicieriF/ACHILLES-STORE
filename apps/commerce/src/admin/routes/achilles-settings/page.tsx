@@ -49,7 +49,7 @@ const SettingsPage = () => {
   return (
     <div className="flex flex-col gap-y-3" data-testid="settings-page">
       <Container>
-        <Heading level="h1">ACHILLES · Configurações</Heading>
+        <Heading level="h1">Configurações</Heading>
         <Text className="mt-2 text-ui-fg-subtle">
           Visão simples da loja e dos serviços necessários para operar.
         </Text>
@@ -109,5 +109,5 @@ const SettingsPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "CONFIGURAÇÕES" });
+export const config = defineRouteConfig({ label: "CONFIGURAÇÕES", rank: 50 });
 export default SettingsPage;

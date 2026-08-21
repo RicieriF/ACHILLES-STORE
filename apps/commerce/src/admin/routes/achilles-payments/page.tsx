@@ -105,5 +105,5 @@ const PaymentsPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "ACHILLES · Pagamentos" });
+export const config = defineRouteConfig({});
 export default PaymentsPage;

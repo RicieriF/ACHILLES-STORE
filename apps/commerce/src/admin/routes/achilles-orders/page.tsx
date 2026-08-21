@@ -138,7 +138,7 @@ const OrdersPage = () => {
   return (
     <div className="flex flex-col gap-y-3">
       <Container>
-        <Heading level="h1">ACHILLES · Pedidos</Heading>
+        <Heading level="h1">Pedidos</Heading>
         <Text className="text-ui-fg-subtle">
           Pedidos pagos e ações pendentes. Pedido ao fornecedor: manual.
         </Text>
@@ -442,5 +442,5 @@ function money(value: string, currency: string): string {
   );
 }
 
-export const config = defineRouteConfig({ label: "PEDIDOS" });
+export const config = defineRouteConfig({ label: "PEDIDOS", rank: 40 });
 export default OrdersPage;

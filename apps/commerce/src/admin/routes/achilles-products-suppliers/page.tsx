@@ -204,7 +204,5 @@ const ProductsSuppliersPage = () => {
   );
 };
 
-export const config = defineRouteConfig({
-  label: "ACHILLES · Produtos e Fornecedores",
-});
+export const config = defineRouteConfig({});
 export default ProductsSuppliersPage;

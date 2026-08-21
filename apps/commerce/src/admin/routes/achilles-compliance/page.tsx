@@ -168,5 +168,5 @@ const CompliancePage = () => {
   );
 };
 
-export const config = defineRouteConfig({ label: "ACHILLES · Compliance" });
+export const config = defineRouteConfig({});
 export default CompliancePage;

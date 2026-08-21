@@ -108,5 +108,5 @@ const AchillesHome = () => {
   );
 };
 
-export const config = defineRouteConfig({ label: "INÍCIO" });
+export const config = defineRouteConfig({ label: "INÍCIO", rank: 10 });
 export default AchillesHome;

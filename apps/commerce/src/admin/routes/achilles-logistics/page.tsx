@@ -209,5 +209,5 @@ const LogisticsPage = () => {
   );
 };
 
-export const config = defineRouteConfig({ label: "ACHILLES · Logística" });
+export const config = defineRouteConfig({});
 export default LogisticsPage;

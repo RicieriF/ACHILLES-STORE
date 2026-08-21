@@ -256,5 +256,5 @@ const PrivateLabelPage = () => {
   );
 };
 
-export const config = defineRouteConfig({ label: "ACHILLES · Private Label" });
+export const config = defineRouteConfig({});
 export default PrivateLabelPage;

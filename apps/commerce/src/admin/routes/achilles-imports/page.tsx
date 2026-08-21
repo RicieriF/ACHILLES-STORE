@@ -143,7 +143,7 @@ const ImportsPage = () => {
   return (
     <div className="flex flex-col gap-4">
       <Container>
-        <Heading level="h1">ACHILLES · Importar produto</Heading>
+        <Heading level="h1">Importar produto</Heading>
         <Text className="mt-2 text-ui-fg-subtle">
           Encontre no CJ ou cole uma URL externa. Todo produto nasce como
           rascunho e exige revisão antes de publicar.
@@ -426,5 +426,5 @@ const ImportsPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "IMPORTAR · Produto" });
+export const config = defineRouteConfig({ label: "IMPORTAR", rank: 30 });
 export default ImportsPage;

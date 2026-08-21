@@ -336,5 +336,5 @@ const BrazilStockPage = () => {
     </div>
   );
 };
-export const config = defineRouteConfig({ label: "ACHILLES · Estoque Brasil" });
+export const config = defineRouteConfig({});
 export default BrazilStockPage;
