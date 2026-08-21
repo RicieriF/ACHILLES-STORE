@@ -8,13 +8,13 @@ type Extension = {
   id: string;
   name: string;
   category: string;
-  status: "CONFIGURED" | "NOT_CONFIGURED" | "DISABLED";
+  status: "INSTALLED" | "CONFIGURED" | "NOT_CONFIGURED" | "DISABLED";
   detail: string;
   configured: Record<string, boolean>;
 };
 type Data = { extensions: Extension[] };
 const color = (status: Extension["status"]): "green" | "orange" | "grey" =>
-  status === "CONFIGURED"
+  status === "CONFIGURED" || status === "INSTALLED"
     ? "green"
     : status === "NOT_CONFIGURED"
       ? "orange"

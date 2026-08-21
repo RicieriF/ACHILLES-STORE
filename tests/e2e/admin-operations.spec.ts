@@ -72,6 +72,62 @@ test("Quick Create accepts incomplete drafts while publication stays gated", asy
   for (const id of createdIds) expect(publicBody).not.toContain(id);
 });
 
+test("Supplier Hub consulta fixture CJ e salva produto como DRAFT", async ({
+  request,
+}) => {
+  const token = await adminAuth(request);
+  const headers = { authorization: `Bearer ${token}` };
+  const connection = await request.post(
+    `${commerceUrl}/admin/achilles/integrations/cj/test`,
+    { headers },
+  );
+  expect(connection.status()).toBe(200);
+  expect((await connection.json()) as { connected: boolean }).toMatchObject({
+    connected: true,
+  });
+  const search = await request.get(
+    `${commerceUrl}/admin/achilles/integrations/cj/products?keyword=organizer`,
+    { headers },
+  );
+  expect(search.status()).toBe(200);
+  expect(JSON.stringify(await search.json())).toContain("CJ-FIXTURE-001");
+  const details = await request.get(
+    `${commerceUrl}/admin/achilles/integrations/cj/products/CJ-FIXTURE-001`,
+    { headers },
+  );
+  expect(details.status()).toBe(200);
+  const imported = await request.post(
+    `${commerceUrl}/admin/achilles/integrations/cj/import`,
+    {
+      headers,
+      data: {
+        pid: `CJ-FIXTURE-${Date.now().toString()}`,
+        title: "[E2E] Fixture CJ EDC Organizer",
+        description: "Fixture autorizada somente em APP_ENV=test.",
+        images: [],
+        sourceUrl: "https://fixture.invalid/product/CJ-FIXTURE-001",
+        currency: "USD",
+        sourceCost: "12.50",
+        variants: [
+          {
+            vid: "CJ-FIXTURE-VID",
+            sku: `CJ-FIXTURE-${Date.now().toString()}`,
+            title: "Black",
+          },
+        ],
+        warehouse: "China Warehouse",
+      },
+    },
+  );
+  expect(imported.status()).toBe(201);
+  expect(
+    (await imported.json()) as {
+      product: { status: string };
+      isPrimary: boolean;
+    },
+  ).toMatchObject({ product: { status: "draft" }, isPrimary: false });
+});
+
 test("Admin dropshipping operations center uses real operational data", async ({
   page,
   request,

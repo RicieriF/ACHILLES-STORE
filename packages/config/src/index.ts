@@ -31,6 +31,7 @@ const optionalUrl = z.preprocess(
   z.url().optional(),
 );
 const featureFlagSchema = z.object({
+  ALIBABA_ENABLED: disabledByDefault,
   ALIBABA_PRODUCT_IMPORT: disabledByDefault,
   ALIBABA_FREIGHT_QUOTE: disabledByDefault,
   ALIBABA_ORDER_CREATE: disabledByDefault,

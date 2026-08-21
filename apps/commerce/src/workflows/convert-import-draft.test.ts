@@ -153,7 +153,7 @@ describe("ImportDraft conversion", () => {
     expect(service.createSupplierOffers).toHaveBeenCalledWith(
       expect.objectContaining({
         import_draft_id: draft.id,
-        is_primary: true,
+        is_primary: false,
         private_label_supported: false,
         status: "INACTIVE",
       }),

@@ -19,6 +19,15 @@ import { sdk } from "../../lib/sdk";
 import type { Supplier } from "../../lib/types";
 
 type SupplierList = { suppliers: Supplier[]; count: number };
+type IntegrationCard = {
+  id: string;
+  name: string;
+  status: string;
+  detail: string;
+  configured: Record<string, boolean>;
+  capabilities: Record<string, boolean>;
+};
+type IntegrationList = { integrations: IntegrationCard[] };
 const blank = {
   name: "",
   provider: "MANUAL",
@@ -131,6 +140,18 @@ const SuppliersPage = () => {
         query: { q },
       }),
   });
+  const integrations = useQuery({
+    queryKey: ["achilles-integrations"],
+    queryFn: () =>
+      sdk.client.fetch<IntegrationList>("/admin/achilles/integrations"),
+  });
+  const testCJ = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch<{
+        connected: boolean;
+        error: { message: string } | null;
+      }>("/admin/achilles/integrations/cj/test", { method: "POST" }),
+  });
   const create = useMutation({
     mutationFn: () =>
       sdk.client.fetch("/admin/achilles/suppliers", {
@@ -165,9 +186,10 @@ const SuppliersPage = () => {
   return (
     <div className="flex flex-col gap-y-3">
       <Container>
-        <Heading level="h1">Fornecedores</Heading>
+        <Heading level="h1">ACHILLES · FORNECEDORES</Heading>
         <Text className="text-ui-fg-subtle">
-          Cadastros manuais; nenhum provider possui conexão externa nesta etapa.
+          Hub de plataformas, estoque nacional e fornecedores manuais. Pedidos e
+          pagamentos externos permanecem OFF.
         </Text>
         <Input
           className="mt-4"
@@ -179,7 +201,72 @@ const SuppliersPage = () => {
         />
       </Container>
       <Container>
-        <Heading level="h2">Novo fornecedor</Heading>
+        <Heading level="h2">Plataformas conectadas</Heading>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {integrations.data?.integrations
+            .filter((item) => ["cj", "alibaba"].includes(item.id))
+            .map((item) => (
+              <div key={item.id} className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <Heading level="h3">{item.name}</Heading>
+                  <Badge
+                    color={item.status === "CONNECTED" ? "green" : "orange"}
+                  >
+                    {item.status}
+                  </Badge>
+                </div>
+                <Text className="mt-2 text-ui-fg-subtle">{item.detail}</Text>
+                <Text className="mt-2">
+                  Produtos{" "}
+                  {item.capabilities.productImport || item.capabilities.import
+                    ? "✓"
+                    : "—"}{" "}
+                  · Estoque {item.capabilities.stock ? "✓" : "—"} · Frete{" "}
+                  {item.capabilities.shipping || item.capabilities.freight
+                    ? "✓"
+                    : "—"}
+                </Text>
+                <Text>Pedido OFF · Pagamento OFF</Text>
+                <div className="mt-3 flex gap-2">
+                  {item.id === "cj" && (
+                    <Button
+                      variant="secondary"
+                      disabled={testCJ.isPending}
+                      onClick={() => {
+                        testCJ.mutate();
+                      }}
+                    >
+                      TESTAR CONEXÃO
+                    </Button>
+                  )}
+                  {item.id === "cj" && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        window.location.assign("/app/achilles-cj-catalog");
+                      }}
+                    >
+                      ABRIR CATÁLOGO CJ
+                    </Button>
+                  )}
+                </div>
+                {item.id === "cj" && testCJ.data && (
+                  <Text className="mt-2">
+                    {testCJ.data.connected
+                      ? "Conexão CJ validada."
+                      : testCJ.data.error?.message}
+                  </Text>
+                )}
+              </div>
+            ))}
+        </div>
+      </Container>
+      <Container>
+        <Heading level="h2">Estoque Brasil</Heading>
+        <Text>BRAZIL_STOCK · READY</Text>
+      </Container>
+      <Container>
+        <Heading level="h2">Fornecedores manuais</Heading>
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <Input
             placeholder="Nome"
