@@ -152,6 +152,76 @@ export const paginationInput = z.object({
   supplier_id: z.string().trim().max(200).optional(),
 });
 
+const quickVariantInput = z.object({
+  title: z.string().trim().min(1).max(120),
+  sku: z.string().trim().min(1).max(120),
+  color: z.string().trim().max(80).optional(),
+  size: z.string().trim().max(80).optional(),
+  power: z.string().trim().max(80).optional(),
+});
+
+export const quickProductCreateInput = z
+  .object({
+    title: z.string().trim().min(2).max(180),
+    description: z.string().trim().min(2).max(4000),
+    category_id: z.string().min(1),
+    image_urls: z.array(z.url()).max(12).default([]),
+    price_brl: z.number().nonnegative().nullable(),
+    sku: z.string().trim().min(1).max(120),
+    availability: z.enum(["UNKNOWN", "IN_STOCK", "OUT_OF_STOCK"]),
+    fulfillment_mode: z.enum([
+      "PRIVATE_LABEL_DROPSHIP",
+      "GENERIC_DROPSHIP",
+      "BRAZIL_STOCK",
+    ]),
+    supplier_id: z.string().min(1).nullable().optional(),
+    supplier_product_id: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .nullable()
+      .optional(),
+    source_url: z.url().nullable().optional(),
+    supplier_cost: decimal.nullable().optional(),
+    variants: z.array(quickVariantInput).max(40).default([]),
+    test_fixture: z.boolean().default(false),
+  })
+  .superRefine((value, context) => {
+    const supplierValues = [
+      value.supplier_id,
+      value.supplier_product_id,
+      value.source_url,
+      value.supplier_cost,
+    ];
+    const supplied = supplierValues.filter(Boolean).length;
+    if (supplied !== 0 && supplied !== supplierValues.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["supplier_id"],
+        message: "Informe fornecedor, produto, origem e custo juntos",
+      });
+    }
+  });
+
+export const quickProductEditInput = z.object({
+  title: z.string().trim().min(2).max(180).optional(),
+  description: z.string().trim().min(2).max(4000).optional(),
+  category_id: z.string().min(1).optional(),
+  image_urls: z.array(z.url()).max(12).optional(),
+  price_brl: z.number().nonnegative().nullable().optional(),
+  sku: z.string().trim().min(1).max(120).optional(),
+  availability: z.enum(["UNKNOWN", "IN_STOCK", "OUT_OF_STOCK"]).optional(),
+  featured: z.boolean().optional(),
+  status: z.literal("draft").optional(),
+});
+
+export const bulkProductInput = z.object({
+  product_ids: z.array(z.string().min(1)).min(1).max(100),
+  action: z.enum(["CATEGORY", "FEATURE", "UNFEATURE", "DEACTIVATE"]),
+  category_id: z.string().min(1).optional(),
+});
+
 const pricingDecimal = z
   .string()
   .regex(/^\d+(\.\d{1,8})?$/, "Use decimal positivo com ponto");
@@ -196,3 +266,5 @@ export type SupplierOfferInput = z.infer<typeof supplierOfferInput>;
 export type BrandingProfileInput = z.infer<typeof brandingProfileInput>;
 export type ProductPolicyInput = z.infer<typeof productPolicyInput>;
 export type PricingAssumptionsInput = z.infer<typeof pricingAssumptionsInput>;
+export type QuickProductCreateInput = z.infer<typeof quickProductCreateInput>;
+export type QuickProductEditInput = z.infer<typeof quickProductEditInput>;
