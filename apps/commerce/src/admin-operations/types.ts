@@ -44,6 +44,8 @@ export type OperationalProduct = {
   offerId: string | null;
   offerCount: number;
   availability: string | null;
+  supplierAvailabilityQuantity: number | null;
+  supplierLeadTimeDays: number | null;
   fulfillmentMode: string | null;
   compliance: string;
   commercialReadiness: string;

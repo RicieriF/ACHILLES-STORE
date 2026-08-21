@@ -16,8 +16,11 @@ import {
   LoadingState,
 } from "../../components/page-state";
 import {
+  adminErrorMessage,
   attentionLabels,
+  humanStatus,
   money,
+  statusBadgeColor,
   type OperationalProduct,
 } from "../../lib/operations";
 import { sdk } from "../../lib/sdk";
@@ -31,6 +34,9 @@ type CatalogData = {
 };
 type CategoryData = { product_categories: Array<{ id: string; name: string }> };
 type SupplierData = { suppliers: Array<{ id: string; name: string }> };
+type ProductMediaData = {
+  product: { images?: Array<{ url: string }> };
+};
 type View = "CARDS" | "TABLE";
 type Filter = "ALL" | "DRAFT" | "PUBLISHED" | "ATTENTION";
 
@@ -64,15 +70,6 @@ const buildQuickVariants = (form: {
     ...(variant.power ? { power: variant.power } : {}),
   }));
 };
-
-const statusColor = (status: string): "green" | "orange" | "red" | "grey" =>
-  status === "READY"
-    ? "green"
-    : status === "BLOCKED" || status === "COMPLIANCE_HOLD"
-      ? "red"
-      : status === "NEEDS_ATTENTION"
-        ? "orange"
-        : "grey";
 
 const ProductCard = ({
   product,
@@ -120,8 +117,8 @@ const ProductCard = ({
             </Text>
           </div>
         </div>
-        <Badge color={statusColor(product.operationalStatus)}>
-          {product.operationalStatus}
+        <Badge color={statusBadgeColor(product.operationalStatus)}>
+          {humanStatus(product.operationalStatus)}
         </Badge>
       </div>
       <div className="grid grid-cols-2 gap-2 text-sm">
@@ -584,17 +581,42 @@ const QuickEdit = ({
 }) => {
   const client = useQueryClient();
   const [title, setTitle] = useState(product.title);
+  const [categoryId, setCategoryId] = useState(product.categoryId ?? "");
   const [price, setPrice] = useState(product.retailPrice?.toString() ?? "");
   const [availability, setAvailability] = useState(
     product.availability ?? "UNKNOWN",
   );
   const [featured, setFeatured] = useState(product.featured);
+  const [pendingImageUrls, setPendingImageUrls] = useState<string[] | null>(
+    null,
+  );
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const categories = useQuery({
+    queryKey: ["product-categories-quick"],
+    queryFn: () =>
+      sdk.client.fetch<CategoryData>("/admin/product-categories", {
+        query: { limit: 100 },
+      }),
+  });
+  const media = useQuery({
+    queryKey: ["product-media-quick-edit", product.id],
+    queryFn: () =>
+      sdk.client.fetch<ProductMediaData>(`/admin/products/${product.id}`, {
+        query: { fields: "+images.*" },
+      }),
+  });
+  const previewImage = pendingImageUrls?.[0] ?? product.thumbnail;
+  const validTitle = title.trim().length >= 2;
   const save = useMutation({
     mutationFn: () =>
       sdk.client.fetch(`/admin/achilles/operations/products/${product.id}`, {
         method: "POST",
         body: {
-          title,
+          title: title.trim(),
+          ...(categoryId ? { category_id: categoryId } : {}),
+          ...(pendingImageUrls ? { image_urls: pendingImageUrls } : {}),
           price_brl: price ? Number(price) : null,
           availability,
           featured,
@@ -603,13 +625,41 @@ const QuickEdit = ({
       }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["achilles-catalog"] });
-      close();
+      await client.invalidateQueries({
+        queryKey: ["achilles-operations-dashboard"],
+      });
+      setSaved(true);
     },
   });
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) return;
+    setUploading(true);
+    setUploadError(null);
+    setSaved(false);
+    try {
+      const result = await sdk.admin.upload.create({ files });
+      const uploaded = result.files.map((file) => file.url);
+      const existing =
+        media.data?.product.images?.map((image) => image.url) ??
+        (product.thumbnail ? [product.thumbnail] : []);
+      setPendingImageUrls([
+        ...uploaded,
+        ...existing.filter((url) => !uploaded.includes(url)),
+      ]);
+    } catch (error) {
+      setUploadError(adminErrorMessage(error));
+    } finally {
+      setUploading(false);
+    }
+  };
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <div className="h-full w-full max-w-lg bg-ui-bg-base p-6 shadow-elevation-flyout">
-        <div className="flex justify-between">
+      <div
+        className="h-full w-full max-w-2xl overflow-y-auto overflow-x-hidden bg-ui-bg-base p-4 shadow-elevation-flyout sm:p-6"
+        data-testid="quick-edit-panel"
+      >
+        <div className="flex items-start justify-between gap-3">
           <Heading level="h1">Edição rápida</Heading>
           <Button variant="secondary" onClick={close}>
             Fechar
@@ -619,53 +669,243 @@ const QuickEdit = ({
           Alterações rápidas retornam o produto a DRAFT; aprovação e compliance
           não são alterados.
         </Text>
-        <div className="mt-6 grid gap-3">
-          <Input
-            value={title}
-            onChange={(event) => {
-              setTitle(event.target.value);
-            }}
-          />
-          <Input
-            placeholder="Preço BRL"
-            type="number"
-            value={price}
-            onChange={(event) => {
-              setPrice(event.target.value);
-            }}
-          />
-          <Select value={availability} onValueChange={setAvailability}>
-            <Select.Trigger>
-              <Select.Value />
-            </Select.Trigger>
-            <Select.Content>
-              <Select.Item value="UNKNOWN">Não informado</Select.Item>
-              <Select.Item value="IN_STOCK">Em estoque</Select.Item>
-              <Select.Item value="OUT_OF_STOCK">Sem estoque</Select.Item>
-            </Select.Content>
-          </Select>
-          <label className="flex items-center gap-2">
-            <input
-              checked={featured}
-              onChange={(event) => {
-                setFeatured(event.target.checked);
-              }}
-              type="checkbox"
-            />
-            Produto em destaque
-          </label>
-          <Button
-            disabled={save.isPending}
-            onClick={() => {
-              save.mutate();
-            }}
-          >
-            Salvar como DRAFT
-          </Button>
-          <a href={`/app/products/${product.id}`}>
-            <Button variant="secondary">Abrir edição completa</Button>
-          </a>
-          {save.isError && <ErrorState message={String(save.error)} />}
+        <div className="mt-6 grid gap-4">
+          <section className="grid gap-3 rounded border p-4">
+            <Heading level="h2">Produto</Heading>
+            <label className="grid gap-1" htmlFor="quick-edit-title">
+              <Text>Título</Text>
+              <Input
+                aria-invalid={!validTitle}
+                id="quick-edit-title"
+                value={title}
+                onChange={(event) => {
+                  setTitle(event.target.value);
+                  setSaved(false);
+                }}
+              />
+            </label>
+            {!validTitle && (
+              <Text className="text-ui-fg-error">
+                Informe um título válido.
+              </Text>
+            )}
+            <div className="grid gap-1">
+              <Text>Categoria</Text>
+              <Select
+                value={categoryId}
+                onValueChange={(value) => {
+                  setCategoryId(value);
+                  setSaved(false);
+                }}
+              >
+                <Select.Trigger aria-label="Categoria">
+                  <Select.Value placeholder="Sem categoria" />
+                </Select.Trigger>
+                <Select.Content>
+                  {categories.data?.product_categories.map((category) => (
+                    <Select.Item key={category.id} value={category.id}>
+                      {category.name}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select>
+            </div>
+          </section>
+
+          <section className="grid gap-3 rounded border p-4">
+            <Heading level="h2">Imagem</Heading>
+            <div className="flex min-h-40 items-center justify-center rounded border bg-ui-bg-subtle">
+              {previewImage ? (
+                <img
+                  alt={`Thumbnail de ${product.title}`}
+                  className="max-h-48 w-full object-contain"
+                  src={previewImage}
+                />
+              ) : (
+                <Text className="text-ui-fg-muted">Sem imagem</Text>
+              )}
+            </div>
+            <label className="grid gap-1" htmlFor="quick-edit-image">
+              <Text>{previewImage ? "Trocar imagem" : "Adicionar imagem"}</Text>
+              <input
+                accept="image/*"
+                id="quick-edit-image"
+                onChange={(event) => {
+                  void upload(event);
+                }}
+                type="file"
+              />
+            </label>
+            {uploading && <Text>Enviando pelo File Module…</Text>}
+            {uploadError && <ErrorState message={uploadError} />}
+          </section>
+
+          <section className="grid gap-3 rounded border p-4">
+            <Heading level="h2">Comercial</Heading>
+            <label className="grid gap-1" htmlFor="quick-edit-price">
+              <Text>Preço de venda</Text>
+              <Input
+                id="quick-edit-price"
+                min="0"
+                placeholder="Não informado"
+                step="0.01"
+                type="number"
+                value={price}
+                onChange={(event) => {
+                  setPrice(event.target.value);
+                  setSaved(false);
+                }}
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Text className="text-ui-fg-subtle">Custo atual</Text>
+                <Text>{money(product.landedCost)}</Text>
+              </div>
+              <div>
+                <Text className="text-ui-fg-subtle">Margem estimada</Text>
+                <Text>
+                  {product.marginPercent === null
+                    ? "Não calculada"
+                    : `${String(product.marginPercent)}%`}
+                </Text>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-3 rounded border p-4">
+            <Heading level="h2">Estoque</Heading>
+            <div className="grid gap-1">
+              <Text>Disponibilidade</Text>
+              <Select
+                disabled={!product.offerId}
+                value={availability}
+                onValueChange={(value) => {
+                  setAvailability(value);
+                  setSaved(false);
+                }}
+              >
+                <Select.Trigger aria-label="Disponibilidade">
+                  <Select.Value />
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Item value="UNKNOWN">Não informado</Select.Item>
+                  <Select.Item value="IN_STOCK">Disponível</Select.Item>
+                  <Select.Item value="OUT_OF_STOCK">Indisponível</Select.Item>
+                </Select.Content>
+              </Select>
+            </div>
+            <div>
+              <Text className="text-ui-fg-subtle">Quantidade</Text>
+              <Text>
+                {product.manageInventory
+                  ? (product.stock ?? "Não informada")
+                  : "Estoque não gerenciado"}
+              </Text>
+            </div>
+          </section>
+
+          <section className="grid gap-3 rounded border p-4">
+            <Heading level="h2">Fornecedor</Heading>
+            {product.offerId ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <Text className="text-ui-fg-subtle">
+                    Fornecedor principal
+                  </Text>
+                  <Text>{product.supplier ?? "Não informado"}</Text>
+                </div>
+                <div>
+                  <Text className="text-ui-fg-subtle">Provider</Text>
+                  <Text>{product.provider ?? "Não informado"}</Text>
+                </div>
+                <div>
+                  <Text className="text-ui-fg-subtle">
+                    Estoque do fornecedor
+                  </Text>
+                  <Text>
+                    {product.supplierAvailabilityQuantity ??
+                      humanStatus(product.availability)}
+                  </Text>
+                </div>
+                <div>
+                  <Text className="text-ui-fg-subtle">Prazo de branding</Text>
+                  <Text>
+                    {product.supplierLeadTimeDays === null
+                      ? "Não informado"
+                      : `${String(product.supplierLeadTimeDays)} dias`}
+                  </Text>
+                </div>
+                {product.origin && (
+                  <a
+                    className="text-ui-fg-interactive"
+                    href={product.origin}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Abrir origem
+                  </a>
+                )}
+              </div>
+            ) : (
+              <Badge color="orange">Fornecedor não vinculado</Badge>
+            )}
+            <a
+              className="text-ui-fg-interactive"
+              href="/app/achilles-products-suppliers"
+            >
+              Abrir fornecimento
+            </a>
+          </section>
+
+          <section className="grid gap-3 rounded border p-4">
+            <Heading level="h2">Status</Heading>
+            <div className="flex flex-wrap gap-2">
+              <Badge color={statusBadgeColor(product.commercialReadiness)}>
+                {humanStatus(product.commercialReadiness)}
+              </Badge>
+              <Badge color={statusBadgeColor(product.compliance)}>
+                {humanStatus(product.compliance)}
+              </Badge>
+              <Badge color={statusBadgeColor(product.status)}>
+                {humanStatus(product.status)}
+              </Badge>
+            </div>
+          </section>
+
+          <section className="grid gap-3 rounded border p-4">
+            <Heading level="h2">Ações</Heading>
+            <label className="flex items-center gap-2">
+              <input
+                checked={featured}
+                onChange={(event) => {
+                  setFeatured(event.target.checked);
+                  setSaved(false);
+                }}
+                type="checkbox"
+              />
+              Produto em destaque
+            </label>
+            {saved && (
+              <Text className="text-ui-fg-success">Rascunho atualizado.</Text>
+            )}
+            {save.isError && (
+              <ErrorState message={adminErrorMessage(save.error)} />
+            )}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                disabled={!validTitle || save.isPending || uploading}
+                onClick={() => {
+                  save.mutate();
+                }}
+              >
+                {save.isPending ? "Salvando…" : "SALVAR DRAFT"}
+              </Button>
+              <a href={`/app/products/${product.id}`}>
+                <Button variant="secondary">ABRIR EDIÇÃO COMPLETA</Button>
+              </a>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -891,8 +1131,10 @@ const CatalogPage = () => {
                       {product.sku ?? "Sem SKU"}
                     </td>
                     <td className="p-2">
-                      <Badge color={statusColor(product.operationalStatus)}>
-                        {product.operationalStatus}
+                      <Badge
+                        color={statusBadgeColor(product.operationalStatus)}
+                      >
+                        {humanStatus(product.operationalStatus)}
                       </Badge>
                     </td>
                     <td className="p-2">{money(product.retailPrice)}</td>

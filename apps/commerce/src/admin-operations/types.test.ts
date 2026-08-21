@@ -28,6 +28,8 @@ const complete = (): OperationalProductCandidate => ({
   offerId: "supoff_1",
   offerCount: 1,
   availability: "IN_STOCK",
+  supplierAvailabilityQuantity: null,
+  supplierLeadTimeDays: null,
   fulfillmentMode: "PRIVATE_LABEL_DROPSHIP",
   compliance: "CLEAR",
   commercialReadiness: "READY_FOR_REVIEW",

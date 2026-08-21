@@ -37,6 +37,8 @@ type CatalogRow = {
   provider: string | null;
   origin: string | null;
   availability: string | null;
+  availability_quantity: string | number | null;
+  branding_lead_time_days: string | number | null;
   fulfillment_mode: string | null;
   sync_status: string | null;
   last_sync_at: Date | string | null;
@@ -136,7 +138,8 @@ with variant_base as (
   select distinct on (so.product_id)
     so.product_id, so.id as offer_id, so.supplier_id, s.name as supplier,
     s.provider, s.status as supplier_status, so.source_url as origin,
-    so.availability, so.fulfillment_mode, so.sync_status, so.last_sync_at,
+    so.availability, so.availability_quantity, so.branding_lead_time_days,
+    so.fulfillment_mode, so.sync_status, so.last_sync_at,
     so.status as offer_status
   from supplier_offer so
   join supplier s on s.id = so.supplier_id and s.deleted_at is null
@@ -166,7 +169,8 @@ select p.id, p.title, p.handle, p.status, p.thumbnail, p.metadata, p.updated_at,
   coalesce(oc.offer_count, 0)::int as offer_count,
   po.offer_id, po.supplier_id, po.supplier, po.provider, po.origin,
   po.supplier_status, po.offer_status,
-  po.availability, po.fulfillment_mode, po.sync_status, po.last_sync_at,
+  po.availability, po.availability_quantity, po.branding_lead_time_days,
+  po.fulfillment_mode, po.sync_status, po.last_sync_at,
   pol.compliance_status, pol.commercial_readiness,
   qd.pricing_status, qd.landed_cost, qd.margin_percent,
   coalesce(sd.shipping_stale, false) as shipping_stale
@@ -321,6 +325,8 @@ function mapProduct(row: CatalogRow): OperationalProduct {
     offerId: row.offer_id,
     offerCount: Number(row.offer_count),
     availability: row.availability,
+    supplierAvailabilityQuantity: numberOrNull(row.availability_quantity),
+    supplierLeadTimeDays: numberOrNull(row.branding_lead_time_days),
     fulfillmentMode: row.fulfillment_mode,
     compliance: row.compliance_status ?? "PENDING",
     commercialReadiness: row.commercial_readiness ?? "DATA_INCOMPLETE",
