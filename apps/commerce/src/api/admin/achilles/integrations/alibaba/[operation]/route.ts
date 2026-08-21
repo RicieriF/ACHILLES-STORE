@@ -1,5 +1,12 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-export function POST(_request: MedusaRequest, response: MedusaResponse): void {
+
+export function POST(request: MedusaRequest, response: MedusaResponse): void {
+  if (request.params.operation !== "test") {
+    response
+      .status(404)
+      .json({ code: "NOT_FOUND", message: "Operação Alibaba não encontrada" });
+    return;
+  }
   const configured = Boolean(
     process.env.ALIBABA_APP_KEY?.trim() &&
     process.env.ALIBABA_APP_SECRET?.trim(),

@@ -11,6 +11,10 @@ test.describe.configure({ mode: "serial" });
 
 test("public journey reaches a real Medusa cart", async ({ page }) => {
   mkdirSync("artifacts/task-015", { recursive: true });
+  const catalogReady = await page.request.get(
+    "http://localhost:9000/achilles/store/catalog",
+  );
+  expect(catalogReady.status()).toBe(200);
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "ir mais longe",
@@ -21,7 +25,11 @@ test("public journey reaches a real Medusa cart", async ({ page }) => {
     .getByRole("link", { name: "Lanternas" });
   await Promise.all([page.waitForURL(/\/categoria\//), categoryLink.click()]);
   await expect(page.getByRole("heading", { name: "Lanternas" })).toBeVisible();
-  await page.locator("article").first().getByRole("link").first().click();
+  const firstProduct = page.locator("article").first();
+  await expect(firstProduct).toBeVisible();
+  const firstProductLink = firstProduct.getByRole("link").first();
+  await expect(firstProductLink).toBeVisible();
+  await firstProductLink.click();
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Lanterna de Desenvolvimento",
@@ -699,8 +707,22 @@ test("card double submit is idempotent, decline preserves checkout and retry app
     paymentIntent: { id: string; status: string };
   };
   expect(firstBody.paymentIntent.id).toBe(secondBody.paymentIntent.id);
-  expect(firstBody.paymentIntent.status).toBe("FAILED");
   expect(JSON.stringify(firstBody)).not.toContain("tok_test_declined");
+  await expect
+    .poll(
+      async () => {
+        const current = await request.get(
+          `http://localhost:9000/achilles/store/payment-intents/${firstBody.paymentIntent.id}`,
+        );
+        expect(current.status()).toBe(200);
+        const body = (await current.json()) as {
+          paymentIntent: { status: string };
+        };
+        return body.paymentIntent.status;
+      },
+      { message: "payment intent recusado deve concluir como FAILED" },
+    )
+    .toBe("FAILED");
   await page.getByRole("tab", { name: "Cartão" }).click();
   await page.getByLabel("Parcelas permitidas pelo fixture").selectOption("2");
   await page.getByRole("button", { name: "Simular cartão recusado" }).click();
@@ -1163,11 +1185,13 @@ test("TASK 014 staging-like mantém fluxo público e expõe Integration Hub aute
     integrations: Array<{
       id: string;
       status: string;
+      configured: Record<string, boolean>;
       capabilities: Record<string, boolean>;
     }>;
   };
   expect(data.integrations.find((item) => item.id === "cj")).toMatchObject({
-    status: "DISABLED",
+    status: "CONFIGURED",
+    configured: { testMode: true },
     capabilities: { orderCreate: false, orderPay: false },
   });
   expect(
@@ -1180,7 +1204,7 @@ test("TASK 014 staging-like mantém fluxo público e expõe Integration Hub aute
   await adminLogin(page, token);
   await page.goto("http://localhost:9000/app/achilles-integrations");
   await expect(page.getByTestId("integration-hub")).toBeVisible();
-  await expect(page.getByTestId("integration-cj")).toContainText("DISABLED");
+  await expect(page.getByTestId("integration-cj")).toContainText("CONFIGURED");
   await page.screenshot({
     path: "artifacts/task-014/integration-hub.png",
     fullPage: true,
