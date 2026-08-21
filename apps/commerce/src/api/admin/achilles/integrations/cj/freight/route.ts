@@ -5,6 +5,7 @@ import {
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
 import { parseOrReply } from "../../../http";
+import { normalizeCJFreight } from "../../../../../../integrations/provider-dto";
 
 const schema = z.object({
   startCountryCode: z.string().length(2).default("CN"),
@@ -27,7 +28,9 @@ export async function POST(
   const body = parseOrReply(schema, request.body, response);
   if (!body) return;
   try {
-    response.json({ quotes: await cjClientFromEnvironment().freight(body) });
+    response.json({
+      quotes: normalizeCJFreight(await cjClientFromEnvironment().freight(body)),
+    });
   } catch (error) {
     response.status(503).json(sanitizeCJError(error));
   }

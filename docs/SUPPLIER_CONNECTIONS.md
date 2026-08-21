@@ -28,9 +28,16 @@ ALIBABA_APP_KEY=
 ALIBABA_APP_SECRET=
 ALIBABA_ACCESS_TOKEN=
 ALIBABA_REFRESH_TOKEN=
+ALIBABA_API_BASE_URL=https://eco.taobao.com/router/rest
+ALIBABA_HEALTHCHECK_PRODUCT_ID=
+ALIBABA_OAUTH_REDIRECT_URI=
 ```
 
-O sistema não simula autorização: sem token válido e uma chamada oficial autorizada, o status não será `CONNECTED`. Permissões ausentes aparecem como **Permissão necessária**. Não é feito scraping de conta.
+Cadastre a aplicação no Alibaba.com Open Platform, solicite as permissões ICBU Dropshipping e configure a Redirect URI exatamente como registrada. O fluxo de authorization code usa callback server-side e nunca devolve o access token ao Admin. Depois da autorização, configure um Product ID acessível para o health check e use **Testar conexão**.
+
+O sistema não simula autorização: sem token válido e uma chamada oficial autorizada, o status não será `CONNECTED`. Permissões ausentes aparecem como **Permissão necessária**. Não é feito scraping. A consulta comercial é por Product ID/URL porque uma permissão oficial de busca geral não foi estabelecida para esta aplicação.
+
+Métodos oficiais preparados: `alibaba.dropshipping.product.get`, `alibaba.shipping.freight.calculate` e `alibaba.order.logistics.tracking.get`. A leitura de produto cria um draft de importação com revisão humana e proteção contra duplicidade por provider + Product ID; plataforma, fornecedor real e `SupplierOffer` permanecem entidades separadas.
 
 ## Bloqueios obrigatórios
 

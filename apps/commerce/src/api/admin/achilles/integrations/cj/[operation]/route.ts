@@ -4,6 +4,7 @@ import { SUPPLIER_DOMAIN_MODULE } from "../../../../../../modules/supplier-domai
 import type SupplierDomainModuleService from "../../../../../../modules/supplier-domain/service";
 import { recordAudit } from "../../../audit";
 import { actorId, type AdminRequest } from "../../../http";
+import { setRuntimeProviderHealth } from "../../../../../../integrations/runtime-health";
 
 export async function POST(
   request: MedusaRequest,
@@ -16,6 +17,16 @@ export async function POST(
     return;
   }
   const result = await cjClientFromEnvironment().testConnection();
+  const testMode =
+    process.env.APP_ENV === "test" && process.env.CJ_TEST_MODE === "true";
+  setRuntimeProviderHealth("CJ", {
+    connected: result.connected && !testMode,
+    checkedAt: new Date().toISOString(),
+    health: result.health,
+    capabilities: result.capabilities,
+    errorCode: result.error?.code ?? null,
+    testMode,
+  });
   try {
     const domain = request.scope.resolve<SupplierDomainModuleService>(
       SUPPLIER_DOMAIN_MODULE,
