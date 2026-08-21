@@ -4,6 +4,7 @@ export type CatalogTaxonomyItem = {
   handle: string;
   aliases: readonly string[];
   title: string;
+  navigationTitle: string;
   description: string;
   image: string;
   subcategories: readonly string[];
@@ -14,6 +15,7 @@ export const catalogTaxonomy: readonly CatalogTaxonomyItem[] = [
     handle: "lanternas",
     aliases: ["iluminacao", "iluminação"],
     title: "Lanternas",
+    navigationTitle: "Lanternas",
     description: "Iluminação portátil para rotina, trilha, camping e trabalho.",
     image: "/images/category-light.svg",
     subcategories: [
@@ -27,8 +29,9 @@ export const catalogTaxonomy: readonly CatalogTaxonomyItem[] = [
   },
   {
     handle: "edc",
-    aliases: ["everyday-carry-edc"],
+    aliases: ["everyday-carry-edc", "everyday-carry-—-edc"],
     title: "Everyday Carry — EDC",
+    navigationTitle: "EDC",
     description:
       "Equipamentos compactos e organização inteligente para o dia a dia.",
     image: "/images/category-field.svg",
@@ -45,6 +48,7 @@ export const catalogTaxonomy: readonly CatalogTaxonomyItem[] = [
     handle: "cutelaria",
     aliases: [],
     title: "Cutelaria",
+    navigationTitle: "Cutelaria",
     description:
       "Ferramentas utilitárias publicadas somente após revisão comercial e de compliance.",
     image: "/images/category-placeholder.svg",
@@ -60,8 +64,9 @@ export const catalogTaxonomy: readonly CatalogTaxonomyItem[] = [
   },
   {
     handle: "camping-outdoor",
-    aliases: ["camping", "outdoor-e-aventura"],
+    aliases: ["camping", "outdoor-e-aventura", "camping-&-outdoor"],
     title: "Camping & Outdoor",
+    navigationTitle: "Camping & Outdoor",
     description:
       "Equipamentos essenciais para camping, trilha, pesca e atividades ao ar livre.",
     image: "/images/category-camp.svg",
@@ -109,6 +114,7 @@ export function presentProduct(product: PublicProductDTO): PublicProductDTO {
 
 export function publicMenuCategories(
   categories: readonly PublicCategoryDTO[],
+  options: { includeEmptyStructural?: boolean } = {},
 ): PublicCategoryDTO[] {
   const merged = new Map<string, PublicCategoryDTO>();
   for (const source of categories) {
@@ -122,8 +128,27 @@ export function publicMenuCategories(
   }
   return catalogTaxonomy.flatMap((item) => {
     const category = merged.get(item.handle);
-    return category ? [category] : [];
+    if (category) return [category];
+    if (!options.includeEmptyStructural) return [];
+    return [
+      {
+        id: `taxonomy-${item.handle}`,
+        handle: item.handle,
+        title: item.title,
+        description: item.description,
+        productCount: 0,
+        image: {
+          id: `taxonomy-${item.handle}`,
+          url: item.image,
+          alt: item.title,
+        },
+      },
+    ];
   });
+}
+
+export function navigationTitle(handle: string): string {
+  return taxonomyItem(handle)?.navigationTitle ?? handle;
 }
 
 export const simpleKitDefinitions = [

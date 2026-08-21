@@ -8,7 +8,7 @@ import { CartIcon, MenuIcon, SearchIcon, UserIcon } from "../ui/icons";
 import { Drawer, SearchInput } from "../ui/interactive";
 import { IconButton } from "../ui/primitives";
 import { BrandLogo } from "./brand-logo";
-import { publicMenuCategories } from "../../lib/catalog-taxonomy";
+import { navigationTitle } from "../../lib/catalog-taxonomy";
 
 export const SiteHeader = ({
   categories,
@@ -19,8 +19,8 @@ export const SiteHeader = ({
   const [searchOpen, setSearchOpen] = useState(false);
   const { cart, openCart } = useCart();
   const links = [
-    ...publicMenuCategories(categories).map((category) => ({
-      label: category.title,
+    ...categories.map((category) => ({
+      label: navigationTitle(category.handle),
       href: `/categoria/${category.handle}`,
     })),
     { label: "Novidades", href: "/#novidades" },
@@ -74,11 +74,7 @@ export const SiteHeader = ({
             >
               <SearchIcon />
             </IconButton>
-            <IconButton
-              label="Conta — em breve"
-              className="desktop-only"
-              disabled
-            >
+            <IconButton label="Conta — em breve" disabled>
               <UserIcon />
             </IconButton>
             <IconButton label="Abrir carrinho" onClick={openCart}>
@@ -127,7 +123,7 @@ export const SiteHeader = ({
           <SearchInput />
         </form>
         <p className="drawer-note">
-          Somente categorias com produtos aprovados aparecem no menu.
+          Produtos aparecem somente depois de todos os gates de publicação.
         </p>
       </Drawer>
     </>

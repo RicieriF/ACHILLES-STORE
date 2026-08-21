@@ -91,8 +91,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </form>
         {products.length === 0 ? (
           <EmptyState title="Seleção em preparação">
-            Nenhum item desta categoria concluiu todos os gates de publicação
-            neste momento.
+            Estamos preparando os primeiros produtos desta categoria.
           </EmptyState>
         ) : (
           <div className="product-grid catalog-grid">

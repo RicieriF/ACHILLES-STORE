@@ -20,7 +20,12 @@
     "docker:down": "docker compose down",
     "db:migrate": "pnpm --filter @achilles/commerce db:migrate",
     "db:generate": "pnpm --filter @achilles/commerce db:generate",
-    "seed": "pnpm --filter @achilles/commerce seed"
+    "seed": "pnpm seed:dev",
+    "seed:dev": "pnpm --filter @achilles/commerce seed:dev",
+    "seed:e2e": "pnpm --filter @achilles/commerce seed:e2e",
+    "seed:production": "pnpm --filter @achilles/commerce seed:production",
+    "clean:test-data": "node --experimental-strip-types ./scripts/clean-test-data.cts",
+    "secret:scan": "node --experimental-strip-types ./scripts/secret-scan.cts"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

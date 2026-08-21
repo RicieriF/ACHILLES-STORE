@@ -10,6 +10,7 @@ import {
 test.describe.configure({ mode: "serial" });
 
 test("public journey reaches a real Medusa cart", async ({ page }) => {
+  mkdirSync("artifacts/task-015", { recursive: true });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "ir mais longe",
@@ -43,6 +44,7 @@ test("public journey reaches a real Medusa cart", async ({ page }) => {
   const cart = page.getByRole("dialog", { name: "Sua mochila" });
   await expect(cart).toBeVisible();
   await expect(cart.getByText("R$ 149,00").last()).toBeVisible();
+  await page.screenshot({ path: "artifacts/task-015/cart.png" });
   await cart.getByRole("button", { name: "Aumentar quantidade" }).click();
   await expect(cart.getByRole("status", { name: "" })).toHaveText("2");
   await expect(cart.getByText("R$ 298,00")).toBeVisible();
@@ -122,7 +124,7 @@ test("private product is rejected by the public API and hidden by the storefront
   ).not.toHaveCount(0);
 });
 
-test("mobile navigation uses the same dynamic category list", async ({
+test("mobile navigation includes structural categories without exposing private products", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -134,8 +136,12 @@ test("mobile navigation uses the same dynamic category list", async ({
     menu.getByRole("link", { name: "Mochilas e Bolsas" }),
   ).toHaveCount(0);
   await expect(
-    menu.getByRole("link", { name: "Everyday Carry — EDC" }),
-  ).toHaveCount(0);
+    menu.getByRole("link", { name: "EDC", exact: true }),
+  ).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Cutelaria" })).toBeVisible();
+  await expect(
+    menu.getByRole("link", { name: "Camping & Outdoor" }),
+  ).toBeVisible();
 });
 
 test("TASK 013 exposes curated empty category pages without leaking restricted products", async ({
@@ -183,6 +189,13 @@ test("TASK 013 visual evidence at desktop and mobile breakpoints", async ({
     fullPage: true,
   });
   await page.screenshot({
+    path: "artifacts/task-015/home-1440.png",
+    fullPage: true,
+  });
+  await page.locator("header.site-header").screenshot({
+    path: "artifacts/task-015/header-1440.png",
+  });
+  await page.screenshot({
     path: "artifacts/task-013/02-hero-header-desktop.png",
   });
   await page.goto("/categoria/lanternas");
@@ -190,9 +203,17 @@ test("TASK 013 visual evidence at desktop and mobile breakpoints", async ({
     path: "artifacts/task-013/03-lanternas-desktop.png",
     fullPage: true,
   });
+  await page.screenshot({
+    path: "artifacts/task-015/lanternas.png",
+    fullPage: true,
+  });
   await page.locator("article").first().getByRole("link").first().click();
   await page.screenshot({
     path: "artifacts/task-013/04-product-desktop.png",
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: "artifacts/task-015/product.png",
     fullPage: true,
   });
   await page.goto("/categoria/edc");
@@ -200,9 +221,17 @@ test("TASK 013 visual evidence at desktop and mobile breakpoints", async ({
     path: "artifacts/task-013/05-edc-empty.png",
     fullPage: true,
   });
+  await page.screenshot({
+    path: "artifacts/task-015/edc-empty.png",
+    fullPage: true,
+  });
   await page.goto("/categoria/cutelaria");
   await page.screenshot({
     path: "artifacts/task-013/06-cutelaria-compliance.png",
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: "artifacts/task-015/cutelaria-restricted.png",
     fullPage: true,
   });
   await page.goto("/buscar?q=lanterna");
@@ -221,8 +250,13 @@ test("TASK 013 visual evidence at desktop and mobile breakpoints", async ({
     path: "artifacts/task-013/09-home-mobile.png",
     fullPage: true,
   });
+  await page.screenshot({
+    path: "artifacts/task-015/home-390.png",
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Abrir menu" }).click();
   await page.screenshot({ path: "artifacts/task-013/10-menu-mobile.png" });
+  await page.screenshot({ path: "artifacts/task-015/menu-mobile.png" });
 });
 
 test("official brand assets adapt between desktop and mobile", async ({
@@ -278,6 +312,10 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
   });
   await page.screenshot({
     path: "artifacts/task-010/checkout-contato-1440.png",
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: "artifacts/task-015/checkout.png",
     fullPage: true,
   });
   await page.getByLabel("Nome completo").fill("Maria da Silva");
@@ -462,6 +500,10 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
   await expect(
     page.getByRole("link", { name: "Acompanhar pedido" }),
   ).toHaveAttribute("href", /\/pedido\/ACH-\d{4}-\d{6,}\?token=/);
+  await page.screenshot({
+    path: "artifacts/task-015/confirmation.png",
+    fullPage: true,
+  });
 });
 
 test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking público", async ({
@@ -548,9 +590,17 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
     path: "artifacts/task-012/customer-order.png",
     fullPage: true,
   });
+  await page.screenshot({
+    path: "artifacts/task-015/customer-order.png",
+    fullPage: true,
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: "artifacts/task-012/tracking-mobile.png",
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: "artifacts/task-015/tracking.png",
     fullPage: true,
   });
 });
