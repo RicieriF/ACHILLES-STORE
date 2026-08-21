@@ -79,6 +79,16 @@ test("Admin dropshipping operations center uses real operational data", async ({
   mkdirSync(artifactDirectory, { recursive: true });
   const token = await adminAuth(request);
   const headers = { authorization: `Bearer ${token}` };
+  const categoriesResponse = await request.get(
+    `${commerceUrl}/admin/product-categories?limit=1`,
+    { headers },
+  );
+  expect(categoriesResponse.status()).toBe(200);
+  const categories = (await categoriesResponse.json()) as {
+    product_categories: Array<{ id: string; name: string }>;
+  };
+  const category = categories.product_categories[0];
+  if (!category) throw new Error("Categoria E2E ausente");
   const unique = Date.now().toString();
   const title = `[E2E] Produto Operacional ${unique}`;
   const create = await createQuickDraft(request, headers, { title });
@@ -110,7 +120,7 @@ test("Admin dropshipping operations center uses real operational data", async ({
     .getByTestId("catalog-product-card")
     .filter({ hasText: title });
   await expect(card).toBeVisible();
-  await expect(card.getByText("COMPLIANCE_HOLD")).toBeVisible();
+  await expect(card.getByText("Pendente de revisão")).toBeVisible();
   await page.screenshot({
     path: `${artifactDirectory}/catalog-cards.png`,
     fullPage: true,
@@ -120,7 +130,54 @@ test("Admin dropshipping operations center uses real operational data", async ({
   await expect(
     page.getByRole("heading", { name: "Edição rápida" }),
   ).toBeVisible();
+  const quickEdit = page.getByTestId("quick-edit-panel");
   await expect(page.getByText(/retornam o produto a DRAFT/)).toBeVisible();
+  await expect(quickEdit.getByLabel("Título")).toHaveValue(title);
+  const categorySelect = quickEdit.getByRole("combobox", {
+    name: "Categoria",
+  });
+  await expect(categorySelect).toBeEnabled();
+  await categorySelect.click();
+  await page.getByRole("option", { name: category.name }).click();
+  await expect(quickEdit.getByText("Sem imagem")).toBeVisible();
+  await expect(quickEdit.getByLabel("Preço de venda")).toHaveValue("");
+  await expect(quickEdit.getByText("Custo atual")).toBeVisible();
+  await expect(quickEdit.getByText("Margem estimada")).toBeVisible();
+  await expect(
+    quickEdit.getByRole("combobox", { name: "Disponibilidade" }),
+  ).toBeVisible();
+  await expect(quickEdit.getByText("Estoque não gerenciado")).toBeVisible();
+  await expect(quickEdit.getByText("Fornecedor não vinculado")).toBeVisible();
+  await expect(quickEdit.getByText("Cadastro incompleto")).toBeVisible();
+  await expect(quickEdit.getByText("Compliance pendente")).toBeVisible();
+  await expect(quickEdit.getByText("Rascunho", { exact: true })).toBeVisible();
+  for (const width of [768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await quickEdit.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  }
+  await quickEdit.getByLabel("Título").fill(`${title} atualizado`);
+  await quickEdit.getByRole("button", { name: "SALVAR DRAFT" }).click();
+  await expect(quickEdit.getByText("Rascunho atualizado.")).toBeVisible();
+  const updated = await request.get(
+    `${commerceUrl}/admin/achilles/operations/catalog/${created.product.id}`,
+    { headers },
+  );
+  expect(updated.status()).toBe(200);
+  const updatedBody = (await updated.json()) as {
+    product: { status: string; categoryId: string | null };
+  };
+  expect(updatedBody.product.status).toBe("draft");
+  expect(updatedBody.product.categoryId).toBe(category.id);
+  const afterSaveCatalog = await request.get(
+    `${commerceUrl}/achilles/store/catalog`,
+  );
+  expect(JSON.stringify(await afterSaveCatalog.json())).not.toContain(
+    created.product.id,
+  );
   await page.screenshot({ path: `${artifactDirectory}/quick-edit.png` });
   await page.getByRole("button", { name: "Fechar" }).click();
 

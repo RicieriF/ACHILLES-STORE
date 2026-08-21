@@ -33,6 +33,8 @@ export type OperationalProduct = {
   offerId: string | null;
   offerCount: number;
   availability: string | null;
+  supplierAvailabilityQuantity: number | null;
+  supplierLeadTimeDays: number | null;
   fulfillmentMode: string | null;
   compliance: string;
   commercialReadiness: string;
@@ -102,3 +104,68 @@ export const money = (value: number | null) =>
         style: "currency",
         currency: "BRL",
       }).format(value);
+
+export type StatusBadgeColor = "green" | "orange" | "red" | "grey";
+
+const statusLabels: Record<string, string> = {
+  COMPLIANCE_HOLD: "Pendente de revisão",
+  DATA_INCOMPLETE: "Cadastro incompleto",
+  CLEAR: "Aprovado",
+  REVIEW_REQUIRED: "Revisão necessária",
+  BLOCKED: "Bloqueado",
+  DRAFT: "Rascunho",
+  PUBLISHED: "Publicado",
+  PENDING: "Compliance pendente",
+  READY: "Pronto",
+  READY_FOR_REVIEW: "Pronto para revisão",
+  NEEDS_ATTENTION: "Requer atenção",
+  OUT_OF_STOCK: "Indisponível",
+  PRICE_CHANGED: "Preço alterado",
+  SHIPPING_CHANGED: "Frete alterado",
+  SUPPLIER_UNAVAILABLE: "Fornecedor indisponível",
+  IN_STOCK: "Disponível",
+  UNKNOWN: "Não informado",
+};
+
+export const humanStatus = (status: string | null | undefined) => {
+  if (!status) return "Não informado";
+  return statusLabels[status.toUpperCase()] ?? status.replaceAll("_", " ");
+};
+
+export const statusBadgeColor = (
+  status: string | null | undefined,
+): StatusBadgeColor => {
+  const normalized = status?.toUpperCase();
+  if (
+    normalized &&
+    ["CLEAR", "PUBLISHED", "READY", "IN_STOCK"].includes(normalized)
+  )
+    return "green";
+  if (
+    normalized &&
+    ["BLOCKED", "OUT_OF_STOCK", "SUPPLIER_UNAVAILABLE", "FAILED"].includes(
+      normalized,
+    )
+  )
+    return "red";
+  if (
+    normalized &&
+    [
+      "COMPLIANCE_HOLD",
+      "DATA_INCOMPLETE",
+      "PENDING",
+      "REVIEW_REQUIRED",
+      "NEEDS_ATTENTION",
+      "READY_FOR_REVIEW",
+      "PRICE_CHANGED",
+      "SHIPPING_CHANGED",
+    ].includes(normalized)
+  )
+    return "orange";
+  return "grey";
+};
+
+export const adminErrorMessage = (error: unknown) =>
+  error instanceof Error && error.message
+    ? error.message
+    : "Não foi possível atualizar o rascunho. Tente novamente.";
