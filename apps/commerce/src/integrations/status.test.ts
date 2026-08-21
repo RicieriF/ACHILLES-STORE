@@ -26,4 +26,18 @@ describe("integration status", () => {
       "Configurado ✓",
     );
   });
+  it("marks the E2E fixture as configured but never connected", () => {
+    process.env.APP_ENV = "test";
+    process.env.CJ_ENABLED = "true";
+    process.env.CJ_TEST_MODE = "true";
+    process.env.CJ_API_KEY = "fixture-only";
+    process.env.CJ_BASE_URL = "https://fixture.invalid";
+    const card = integrationCards().find((item) => item.id === "cj");
+    expect(card).toMatchObject({
+      status: "CONFIGURED",
+      configured: { testMode: true },
+      capabilities: { orderCreate: false, orderPay: false },
+    });
+    expect(card?.status).not.toBe("CONNECTED");
+  });
 });

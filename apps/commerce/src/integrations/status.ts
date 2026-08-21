@@ -41,6 +41,8 @@ export function integrationCards(): IntegrationCard[] {
     flags.ALIBABA_FREIGHT_QUOTE ||
     flags.ALIBABA_TRACKING;
   const cjCredentials = configured("CJ_API_KEY") && configured("CJ_BASE_URL");
+  const cjTestMode =
+    process.env.APP_ENV === "test" && process.env.CJ_TEST_MODE === "true";
   const mpEnvironment = process.env.MERCADO_PAGO_ENVIRONMENT;
   const mpCredentials =
     (configured("MERCADO_PAGO_PUBLIC_KEY") ||
@@ -98,13 +100,16 @@ export function integrationCards(): IntegrationCard[] {
           ? "DEGRADED"
           : "NOT_CONFIGURED",
       detail: cjCredentials
-        ? "Foundation configurada; sem declaração de conexão até health check oficial."
+        ? cjTestMode
+          ? "Fixture E2E configurada; não representa conexão real."
+          : "Foundation configurada; sem declaração de conexão até health check oficial."
         : "Foundation offline disponível; credenciais não configuradas.",
       configured: {
         apiKey: configured("CJ_API_KEY"),
         accessToken: configured("CJ_ACCESS_TOKEN"),
         refreshToken: configured("CJ_REFRESH_TOKEN"),
         baseUrl: configured("CJ_BASE_URL"),
+        testMode: cjTestMode,
       },
       capabilities: {
         productImport: flags.CJ_PRODUCT_IMPORT,

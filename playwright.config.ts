@@ -12,9 +12,13 @@ const e2eEnvironment = {
   CJ_STOCK: "true",
   CJ_SHIPPING: "true",
   CJ_TRACKING: "true",
+  CJ_ORDER_CREATE: "false",
+  CJ_ORDER_PAY: "false",
   CJ_TEST_MODE: "true",
   CJ_API_KEY: "e2e-fixture-only",
   CJ_BASE_URL: "https://fixture.invalid",
+  ALIBABA_ORDER_CREATE: "false",
+  ALIBABA_ORDER_PAY: "false",
 };
 const reuseE2eServers = process.env.E2E_REUSE_SERVERS === "true";
 Object.assign(process.env, e2eEnvironment);

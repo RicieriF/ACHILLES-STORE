@@ -9,6 +9,12 @@ export async function POST(
   request: MedusaRequest,
   response: MedusaResponse,
 ): Promise<void> {
+  if (request.params.operation !== "test") {
+    response
+      .status(404)
+      .json({ code: "NOT_FOUND", message: "Operação CJ não encontrada" });
+    return;
+  }
   const result = await cjClientFromEnvironment().testConnection();
   try {
     const domain = request.scope.resolve<SupplierDomainModuleService>(
