@@ -12,9 +12,13 @@ marcado só por título.
 ## Isolamento
 
 Playwright sobe o Commerce com `DATABASE_URL` em `achilles_store_e2e`.
-`scripts/ensure-e2e-database.cts` cria esse banco no Postgres do Compose.
-`reuseExistingServer` só é permitido se o servidor já estiver no banco E2E.
-O Admin do operador permanece em `achilles_store`.
+`scripts/ensure-e2e-database.cts` cria/reseta esse banco no PostgreSQL já
+disponível em `localhost:5432`. No CI isso é o service container do GitHub
+Actions; `docker compose` não é usado. Localmente o Compose só inicia Postgres
+se a porta 5432 estiver inacessível. Se o database resolvido não for
+`achilles_store_e2e`, o Playwright aborta. `reuseExistingServer` só é permitido
+se o servidor já estiver no banco E2E. O Admin do operador permanece em
+`achilles_store`.
 
 ## Cleanup
 

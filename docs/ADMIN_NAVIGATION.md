@@ -12,7 +12,10 @@ e Price Lists. Essas rotas foram preservadas sem hacks de DOM ou CSS. A
 duplicidade nativa remanescente é uma limitação conhecida do Admin Medusa.
 
 O Playwright usa o banco isolado `achilles_store_e2e`. O Admin operacional
-continua em `achilles_store` e não deve receber fixtures da suíte.
+continua em `achilles_store` e não deve receber fixtures da suíte. No CI o
+PostgreSQL do GitHub Actions é reutilizado; `docker compose` não inicia o
+serviço `postgres`. Localmente o Compose só sobe se `localhost:5432` estiver
+inacessível.
 
 O cleanup de fixtures é sempre explícito:
 

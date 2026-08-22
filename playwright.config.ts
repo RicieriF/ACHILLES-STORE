@@ -1,15 +1,23 @@
 import { defineConfig, devices } from "@playwright/test";
+import {
+  assertE2eDatabaseUrl,
+  resolveE2eDatabaseUrl,
+  resolveOperatorDatabaseUrl,
+} from "./scripts/e2e-database-url";
 
-const operatorDatabaseUrl =
-  process.env.OPERATOR_DATABASE_URL ??
-  "postgres://achilles:local_development_only@localhost:5432/achilles_store";
-const e2eDatabaseUrl =
-  process.env.E2E_DATABASE_URL ??
-  operatorDatabaseUrl.replace(/\/[^/]+$/, "/achilles_store_e2e");
+const operatorDatabaseUrl = resolveOperatorDatabaseUrl(process.env);
+const e2eDatabaseUrl = resolveE2eDatabaseUrl({
+  ...process.env,
+  OPERATOR_DATABASE_URL: operatorDatabaseUrl,
+  DATABASE_URL: operatorDatabaseUrl,
+});
+assertE2eDatabaseUrl(e2eDatabaseUrl);
 
 const e2eEnvironment = {
   APP_ENV: "test",
   DATABASE_URL: e2eDatabaseUrl,
+  E2E_DATABASE_URL: e2eDatabaseUrl,
+  OPERATOR_DATABASE_URL: operatorDatabaseUrl,
   PUBLIC_BASE_URL: "http://localhost:9000",
   STOREFRONT_BASE_URL: "http://localhost:3000",
   PAYMENT_TEST_PROVIDER_ENABLED: "true",
@@ -40,9 +48,9 @@ const e2eEnvironment = {
 };
 const reuseE2eServers =
   process.env.E2E_REUSE_SERVERS === "true" &&
-  (process.env.DATABASE_URL ?? "").includes("achilles_store_e2e");
+  (process.env.DATABASE_URL ?? e2eDatabaseUrl).includes("achilles_store_e2e");
 Object.assign(process.env, e2eEnvironment);
-process.env.OPERATOR_DATABASE_URL = operatorDatabaseUrl;
+assertE2eDatabaseUrl(process.env.DATABASE_URL ?? "");
 
 export default defineConfig({
   testDir: "./tests/e2e",

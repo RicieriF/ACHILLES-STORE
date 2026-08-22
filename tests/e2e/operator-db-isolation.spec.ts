@@ -9,9 +9,15 @@ test("operator database does not keep this E2E run", () => {
   const marker = readFileSync(markerPath, "utf8").trim();
   expect(marker.length).toBeGreaterThan(5);
   const result = spawnSync(
-    `docker compose exec -T postgres psql -U achilles -d achilles_store -tAc "select count(*) from product where deleted_at is null and title like '%${marker}%'"`,
-    { encoding: "utf8", shell: true },
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "scripts/ensure-e2e-database.cts",
+      "--operator-title-count",
+      marker,
+    ],
+    { encoding: "utf8", env: process.env },
   );
-  expect(result.status, result.stderr).toBe(0);
-  expect(result.stdout.trim()).toBe("0");
+  expect(result.status, `${result.stderr}\n${result.stdout}`).toBe(0);
+  expect(result.stdout.trim().split(/\r?\n/).at(-1)).toBe("0");
 });
