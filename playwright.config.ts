@@ -1,12 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const operatorDatabaseUrl =
+  process.env.OPERATOR_DATABASE_URL ??
+  "postgres://achilles:local_development_only@localhost:5432/achilles_store";
+const e2eDatabaseUrl =
+  process.env.E2E_DATABASE_URL ??
+  operatorDatabaseUrl.replace(/\/[^/]+$/, "/achilles_store_e2e");
+
 const e2eEnvironment = {
   APP_ENV: "test",
+  DATABASE_URL: e2eDatabaseUrl,
   PUBLIC_BASE_URL: "http://localhost:9000",
   STOREFRONT_BASE_URL: "http://localhost:3000",
   PAYMENT_TEST_PROVIDER_ENABLED: "true",
   PAYMENT_TEST_WEBHOOK_SECRET: "playwright_test_webhook_secret_only",
   E2E_ADMIN_PASSWORD: "E2eOnly_012_Strong",
+  SEED_DEMO_CATALOG: "true",
   CJ_ENABLED: "true",
   CJ_PRODUCT_IMPORT: "true",
   CJ_STOCK: "true",
@@ -29,22 +38,27 @@ const e2eEnvironment = {
   ALIBABA_ORDER_CREATE: "false",
   ALIBABA_ORDER_PAY: "false",
 };
-const reuseE2eServers = process.env.E2E_REUSE_SERVERS === "true";
+const reuseE2eServers =
+  process.env.E2E_REUSE_SERVERS === "true" &&
+  (process.env.DATABASE_URL ?? "").includes("achilles_store_e2e");
 Object.assign(process.env, e2eEnvironment);
+process.env.OPERATOR_DATABASE_URL = operatorDatabaseUrl;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: true,
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   reporter: "html",
   use: { baseURL: "http://localhost:3000", trace: "on-first-retry" },
   webServer: [
     {
-      command: "pnpm --filter @achilles/commerce start:e2e",
+      command:
+        "node --experimental-strip-types ./scripts/ensure-e2e-database.cts && pnpm --filter @achilles/commerce db:migrate && pnpm --filter @achilles/commerce start:e2e",
       url: "http://localhost:9000/ready",
       reuseExistingServer: reuseE2eServers,
-      timeout: 240_000,
+      timeout: 300_000,
       env: {
         ...process.env,
         ...e2eEnvironment,

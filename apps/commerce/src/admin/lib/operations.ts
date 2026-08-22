@@ -45,6 +45,9 @@ export type OperationalProduct = {
   featured: boolean;
   attention: AttentionReason[];
   operationalStatus: string;
+  archived?: boolean;
+  canPublish?: boolean;
+  publicationBlockers?: string[];
 };
 
 export type DashboardData = {
@@ -125,6 +128,18 @@ const statusLabels: Record<string, string> = {
   SUPPLIER_UNAVAILABLE: "Fornecedor indisponível",
   IN_STOCK: "Disponível",
   UNKNOWN: "Não informado",
+  PAID: "Pago",
+  APPROVAL_REQUIRED: "Aguardando fornecedor",
+  APPROVED: "Pedido ao fornecedor",
+  SUPPLIER_APPROVAL_REQUIRED: "Aguardando fornecedor",
+  FULFILLMENT_REVIEW: "Aguardando fornecedor",
+  SUPPLIER_APPROVED: "Pedido ao fornecedor",
+  SUPPLIER_CONFIRMED: "Pedido ao fornecedor",
+  SHIPPED: "Enviado",
+  IN_TRANSIT: "Enviado",
+  DELIVERED: "Entregue",
+  BLOCKING: "Bloqueia venda",
+  ACTION_REQUIRED: "Completar cadastro",
 };
 
 export const humanStatus = (status: string | null | undefined) => {

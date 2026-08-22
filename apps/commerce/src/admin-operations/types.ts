@@ -1,3 +1,5 @@
+import { canPublishProduct, operatorPublicationBlockers } from "./publication";
+
 export const attentionReasons = [
   "SEM_IMAGEM",
   "SEM_PRECO",
@@ -55,14 +57,21 @@ export type OperationalProduct = {
   lastSyncAt: string | null;
   updatedAt: string;
   featured: boolean;
+  archived: boolean;
   attention: AttentionReason[];
   operationalStatus: DropshippingStatus;
   publicationEligible: boolean;
+  canPublish: boolean;
+  publicationBlockers: string[];
 };
 
 export type OperationalProductCandidate = Omit<
   OperationalProduct,
-  "attention" | "operationalStatus" | "publicationEligible"
+  | "attention"
+  | "operationalStatus"
+  | "publicationEligible"
+  | "canPublish"
+  | "publicationBlockers"
 >;
 
 const unique = <T>(values: T[]): T[] => [...new Set(values)];
@@ -112,6 +121,7 @@ export function enrichOperationalProduct(
   candidate: OperationalProductCandidate,
 ): OperationalProduct {
   const attention = deriveAttention(candidate);
+  const publicationBlockers = operatorPublicationBlockers(candidate);
   return {
     ...candidate,
     attention,
@@ -123,6 +133,8 @@ export function enrichOperationalProduct(
       candidate.pricingStatus === "PRICED" &&
       candidate.offerId !== null &&
       attention.length === 0,
+    canPublish: canPublishProduct(candidate),
+    publicationBlockers,
   };
 }
 

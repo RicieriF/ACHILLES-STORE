@@ -72,7 +72,9 @@ const ImportsPage = () => {
       setUrl("");
       await refresh();
       toast.success(
-        reused ? "Draft existente reutilizado" : "Draft criado para revisão",
+        reused
+          ? "Rascunho existente reutilizado"
+          : "Rascunho criado para revisão",
       );
     },
     onError: () =>
@@ -134,8 +136,8 @@ const ImportsPage = () => {
       await refresh();
       toast.success(
         conversion.idempotent
-          ? "Produto interno já existia"
-          : "Produto interno DRAFT criado",
+          ? "Este rascunho já estava em Produtos"
+          : "Rascunho enviado para Produtos",
       );
     },
     onError: (error) => toast.error(String(error)),
@@ -265,7 +267,7 @@ const ImportsPage = () => {
       )}
       {selected && (
         <Container>
-          <Heading level="h2">Revisar draft</Heading>
+          <Heading level="h2">Revisar rascunho</Heading>
           <Text className="mt-1 text-ui-fg-subtle">
             Original: {selected.title_raw || "não coletado"}
           </Text>
@@ -367,7 +369,7 @@ const ImportsPage = () => {
                 action.mutate({ path: "approve" });
               }}
             >
-              Aprovar draft
+              Aprovar rascunho
             </Button>
             <Button
               variant="danger"
@@ -378,23 +380,22 @@ const ImportsPage = () => {
                 });
               }}
             >
-              Rejeitar draft
+              Rejeitar rascunho
             </Button>
           </div>
           <Text className="mt-3 text-ui-fg-subtle">
-            Aprovar libera apenas a criação do produto interno como rascunho.
-            Nenhum item é publicado automaticamente.
+            Aprovar libera o envio para Produtos como rascunho. Nenhum item é
+            publicado automaticamente.
           </Text>
           {selected.converted_product_id ? (
             <div className="mt-4 rounded border p-3">
-              <Text weight="plus">Produto interno criado</Text>
-              <Text>Preço de venda: ainda não definido</Text>
-              <Text>Margem ainda não calculável.</Text>
+              <Text weight="plus">Rascunho enviado para Produtos</Text>
+              <Text>Defina o preço em Produtos antes de publicar.</Text>
               <a
                 className="text-ui-fg-interactive"
-                href={`/app/products/${selected.converted_product_id}`}
+                href={`/app/achilles-catalog?q=${encodeURIComponent(selected.title_normalized || selected.title_raw || "")}`}
               >
-                ABRIR PRODUTO
+                ABRIR EM PRODUTOS
               </a>
             </div>
           ) : selected.status === "APPROVED" ? (
@@ -404,17 +405,17 @@ const ImportsPage = () => {
                 onClick={() => {
                   if (
                     window.confirm(
-                      "Criar produto interno DRAFT? Esta ação não publica nem compra o produto.",
+                      "Enviar para Produtos como rascunho? Esta ação não publica o produto.",
                     )
                   )
                     convert.mutate();
                 }}
               >
-                CRIAR PRODUTO INTERNO
+                ENVIAR PARA PRODUTOS
               </Button>
               <Text className="mt-2 text-ui-fg-subtle">
-                Exige confirmação humana e cria somente estruturas
-                administrativas incompletas.
+                O item entra em Produtos como rascunho. Defina o preço e
+                publique depois.
               </Text>
             </div>
           ) : null}

@@ -13,6 +13,7 @@ import {
 import type { OperationsDatabase } from "../../../../../../admin-operations/service";
 import { SUPPLIER_DOMAIN_MODULE } from "../../../../../../modules/supplier-domain";
 import type SupplierDomainModuleService from "../../../../../../modules/supplier-domain/service";
+import { applySimpleRetailPrice } from "../../../../../../pricing/service";
 import { recordAudit, safeSnapshot } from "../../../audit";
 import {
   actorId,
@@ -112,6 +113,13 @@ export async function POST(
       });
     }
   }
+  if (input.price_brl !== undefined && input.price_brl !== null)
+    await applySimpleRetailPrice(
+      request.scope,
+      current.id,
+      input.price_brl,
+      actorId(request),
+    );
   await recordAudit(domain, {
     action: "ADMIN_QUICK_PRODUCT_UPDATED",
     entityType: "product",

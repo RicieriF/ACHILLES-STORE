@@ -9,7 +9,7 @@ import {
   Text,
 } from "@medusajs/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import {
   EmptyState,
   ErrorState,
@@ -38,7 +38,7 @@ type ProductMediaData = {
   product: { images?: Array<{ url: string }> };
 };
 type View = "CARDS" | "TABLE";
-type Filter = "ALL" | "DRAFT" | "PUBLISHED" | "ATTENTION";
+type Filter = "ALL" | "DRAFT" | "PUBLISHED" | "ATTENTION" | "ARCHIVED";
 
 const splitValues = (value: string) =>
   value
@@ -156,8 +156,9 @@ const ProductCard = ({
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
-        {product.status === "draft" && (
+        {product.status === "draft" && !product.archived && (
           <Button
+            disabled={!product.canPublish}
             onClick={() => {
               publish(product);
             }}
@@ -173,9 +174,6 @@ const ProductCard = ({
         >
           Edição rápida
         </Button>
-        <a href={`/app/products/${product.id}`}>
-          <Button variant="secondary">Editar completo</Button>
-        </a>
         <Button
           variant="secondary"
           onClick={() => {
@@ -184,7 +182,9 @@ const ProductCard = ({
         >
           Duplicar
         </Button>
-        {product.status === "draft" ? (
+        {product.status === "draft" &&
+        !product.offerId &&
+        product.offerCount === 0 ? (
           <Button
             variant="danger"
             onClick={() => {
@@ -194,15 +194,29 @@ const ProductCard = ({
             Excluir produto
           </Button>
         ) : (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              archive(product);
-            }}
-          >
-            Arquivar produto
-          </Button>
+          !product.archived && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                archive(product);
+              }}
+            >
+              Arquivar produto
+            </Button>
+          )
         )}
+        {product.status === "draft" &&
+          !product.canPublish &&
+          (product.publicationBlockers?.length ?? 0) > 0 && (
+            <Text className="w-full text-ui-fg-subtle">
+              Ainda não pode ser publicado:
+              {product.publicationBlockers?.map((item) => (
+                <span key={item}>
+                  <br />• {item}
+                </span>
+              ))}
+            </Text>
+          )}
         {product.origin && (
           <a href={product.origin} rel="noreferrer" target="_blank">
             <Button variant="secondary">Origem</Button>
@@ -324,7 +338,7 @@ const QuickCreate = ({
           <div>
             <Heading level="h1">Cadastro rápido</Heading>
             <Text className="text-ui-fg-subtle">
-              Etapa {step} de 5 · o produto será salvo como DRAFT.
+              Etapa {step} de 5 · o produto será salvo como rascunho.
             </Text>
           </div>
           <Button variant="secondary" onClick={close}>
@@ -391,7 +405,7 @@ const QuickCreate = ({
             />
             <Text>
               {uploading
-                ? "Enviando pelo File Module…"
+                ? "Enviando imagem…"
                 : `${String(form.image_urls.length)} imagem(ns) enviada(s)`}
             </Text>
             <div className="grid grid-cols-3 gap-2">
@@ -553,7 +567,7 @@ const QuickCreate = ({
             <Text>
               Variantes: {String(buildQuickVariants(form).length || 1)}
             </Text>
-            <Badge color="orange">DRAFT · incompleto</Badge>
+            <Badge color="orange">Rascunho incompleto</Badge>
           </div>
         )}
         {create.isError && (
@@ -596,7 +610,7 @@ const QuickCreate = ({
                   create.mutate("CLOSE");
                 }}
               >
-                {create.isPending ? "Salvando…" : "SALVAR DRAFT"}
+                {create.isPending ? "Salvando…" : "Salvar rascunho"}
               </Button>
             </div>
           )}
@@ -700,8 +714,8 @@ const QuickEdit = ({
           </Button>
         </div>
         <Text className="mt-2 text-ui-fg-subtle">
-          Alterações rápidas retornam o produto a DRAFT; aprovação e compliance
-          não são alterados.
+          Alterações rápidas voltam o produto para rascunho. A revisão de
+          anúncio não é alterada automaticamente.
         </Text>
         <div className="mt-6 grid gap-4">
           <section className="grid gap-3 rounded border p-4">
@@ -770,7 +784,7 @@ const QuickEdit = ({
                 type="file"
               />
             </label>
-            {uploading && <Text>Enviando pelo File Module…</Text>}
+            {uploading && <Text>Enviando imagem…</Text>}
             {uploadError && <ErrorState message={uploadError} />}
           </section>
 
@@ -933,11 +947,8 @@ const QuickEdit = ({
                   save.mutate();
                 }}
               >
-                {save.isPending ? "Salvando…" : "SALVAR DRAFT"}
+                {save.isPending ? "Salvando…" : "Salvar rascunho"}
               </Button>
-              <a href={`/app/products/${product.id}`}>
-                <Button variant="secondary">ABRIR EDIÇÃO COMPLETA</Button>
-              </a>
             </div>
           </section>
         </div>
@@ -958,11 +969,16 @@ const CatalogPage = () => {
   const [pendingDeletion, setPendingDeletion] =
     useState<OperationalProduct | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("q");
+    if (requested) setQ(requested);
+  }, []);
   const query = useQuery({
-    queryKey: ["achilles-catalog", q, offset],
+    queryKey: ["achilles-catalog", q, offset, filter],
     queryFn: () =>
       sdk.client.fetch<CatalogData>("/admin/achilles/operations/catalog", {
-        query: { q, limit: 24, offset },
+        query: { q, limit: 24, offset, filter },
       }),
   });
   const refresh = () =>
@@ -1006,14 +1022,13 @@ const CatalogPage = () => {
   };
   const publication = useMutation({
     mutationFn: (id: string) =>
-      sdk.client.fetch(`/admin/products/${id}`, {
+      sdk.client.fetch(`/admin/achilles/operations/products/${id}/publish`, {
         method: "POST",
-        body: { status: "published" },
       }),
     onSuccess: refresh,
     onError: (error) => {
       window.alert(
-        `${adminErrorMessage(error)} Ainda não pode ser publicado: verifique preço, compliance e fornecedor.`,
+        `${adminErrorMessage(error)}\nAinda não pode ser publicado: defina o preço, vincule um fornecedor e aguarde a revisão.`,
       );
     },
   });
@@ -1038,17 +1053,7 @@ const CatalogPage = () => {
         : [...current, id],
     );
   };
-  const products = useMemo(
-    () =>
-      (query.data?.products ?? []).filter(
-        (product) =>
-          filter === "ALL" ||
-          (filter === "DRAFT" && product.status === "draft") ||
-          (filter === "PUBLISHED" && product.status === "published") ||
-          (filter === "ATTENTION" && product.attention.length > 0),
-      ),
-    [query.data, filter],
-  );
+  const products = useMemo(() => query.data?.products ?? [], [query.data]);
   return (
     <div className="flex flex-col gap-y-3" data-testid="operations-catalog">
       <Container>
@@ -1081,6 +1086,7 @@ const CatalogPage = () => {
             value={filter}
             onValueChange={(value) => {
               setFilter(value as Filter);
+              setOffset(0);
             }}
           >
             <Select.Trigger>
@@ -1091,6 +1097,7 @@ const CatalogPage = () => {
               <Select.Item value="DRAFT">Rascunhos</Select.Item>
               <Select.Item value="PUBLISHED">Publicados</Select.Item>
               <Select.Item value="ATTENTION">Precisa de atenção</Select.Item>
+              <Select.Item value="ARCHIVED">Arquivados</Select.Item>
             </Select.Content>
           </Select>
           <div className="flex gap-1">
@@ -1161,7 +1168,7 @@ const CatalogPage = () => {
         <ErrorState message={String(query.error)} />
       ) : !products.length ? (
         <EmptyState>
-          Nenhum produto corresponde aos filtros. Cadastre um DRAFT ou ajuste a
+          Nenhum produto corresponde aos filtros. Importe um produto ou ajuste a
           busca.
         </EmptyState>
       ) : view === "CARDS" ? (
@@ -1228,8 +1235,9 @@ const CatalogPage = () => {
                     </td>
                     <td className="p-2">{product.stock ?? "Não informado"}</td>
                     <td className="flex gap-1 p-2">
-                      {product.status === "draft" && (
+                      {product.status === "draft" && !product.archived && (
                         <Button
+                          disabled={!product.canPublish}
                           onClick={() => {
                             publish(product);
                           }}
@@ -1253,7 +1261,9 @@ const CatalogPage = () => {
                       >
                         Duplicar
                       </Button>
-                      {product.status === "draft" ? (
+                      {product.status === "draft" &&
+                      !product.offerId &&
+                      product.offerCount === 0 ? (
                         <Button
                           variant="danger"
                           onClick={() => {
@@ -1263,14 +1273,16 @@ const CatalogPage = () => {
                           Excluir
                         </Button>
                       ) : (
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            archive(product);
-                          }}
-                        >
-                          Arquivar
-                        </Button>
+                        !product.archived && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              archive(product);
+                            }}
+                          >
+                            Arquivar
+                          </Button>
+                        )
                       )}
                     </td>
                   </tr>

@@ -7,6 +7,7 @@ import {
 import { SUPPLIER_DOMAIN_MODULE } from "../modules/supplier-domain";
 import type SupplierDomainModuleService from "../modules/supplier-domain/service";
 import { recordAudit } from "../api/admin/achilles/audit";
+import { testFixtureMetadata } from "../lib/test-fixture";
 
 const pendingSupplierName = (provider: string) =>
   `[PENDENTE] Fornecedor ${provider} não identificado`;
@@ -184,17 +185,20 @@ export async function convertImportDraft(
         products: [
           {
             title: approvedTitle,
-            description: draft.description_normalized ?? null,
+            description:
+              draft.description_normalized?.trim() ||
+              draft.title_normalized ||
+              null,
             status: ProductStatus.DRAFT,
             shipping_profile_id: shippingProfile.id,
             sales_channels: [],
             category_ids: categories[0] ? [categories[0].id] : [],
             images: mediaItems(draft.media).map((url) => ({ url })),
-            metadata: {
+            metadata: testFixtureMetadata({
               achilles_import_draft_id: draft.id,
               commercial_readiness: readiness(draft.compliance_status),
               approved_specifications: JSON.stringify(draft.specifications),
-            },
+            }),
             options: normalizedVariants.options,
             variants: normalizedVariants.variants,
           },
@@ -213,7 +217,7 @@ export async function convertImportDraft(
       entityType: "product",
       entityId: product.id,
       actorId,
-      summary: `Produto DRAFT criado a partir de ${draft.id}`,
+      summary: `Rascunho criado a partir da importação`,
       metadata: { import_draft_id: draft.id },
     });
 
@@ -258,10 +262,10 @@ export async function convertImportDraft(
       unit_cost_max: draft.source_price_max ?? null,
       moq: draft.moq ?? 1,
       availability: "UNKNOWN",
-      status: "INACTIVE",
+      status: "ACTIVE",
       fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
       private_label_supported: false,
-      is_primary: false,
+      is_primary: true,
       freight_metadata: null,
       last_sync_at: draft.last_fetch_at ?? null,
       sync_status: draft.last_fetch_at ? "SYNCED" : "NEVER_SYNCED",

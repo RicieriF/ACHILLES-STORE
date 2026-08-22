@@ -8,6 +8,7 @@ import {
 } from "../../components/page-state";
 import {
   attentionLabels,
+  humanStatus,
   money,
   type DashboardData,
 } from "../../lib/operations";
@@ -33,11 +34,11 @@ const AchillesHome = () => {
             </Text>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href="/app/achilles-catalog">
-              <Button>NOVO PRODUTO</Button>
-            </a>
             <a href="/app/achilles-imports">
-              <Button variant="secondary">IMPORTAR PRODUTO</Button>
+              <Button>IMPORTAR PRODUTO</Button>
+            </a>
+            <a href="/app/achilles-catalog">
+              <Button variant="secondary">VER PRODUTOS</Button>
             </a>
             <a href="/app/achilles-orders">
               <Button variant="secondary">VER PEDIDOS</Button>
@@ -68,7 +69,7 @@ const AchillesHome = () => {
           <div className="flex items-center justify-between">
             <Heading level="h2">Catálogo</Heading>
             <a className="text-ui-fg-interactive" href="/app/achilles-catalog">
-              Abrir catálogo
+              Ver produtos
             </a>
           </div>
           <Text className="mt-3 text-ui-fg-subtle">
@@ -81,14 +82,13 @@ const AchillesHome = () => {
       <Container>
         <Heading level="h2">Precisa de atenção</Heading>
         {!data.alerts.length ? (
-          <EmptyState>Nenhuma pendência derivada dos dados atuais.</EmptyState>
+          <EmptyState>Tudo em dia — nada para resolver.</EmptyState>
         ) : (
           <div className="mt-4 divide-y">
-            {data.alerts.map((alert, index) => (
-              <a
+            {data.alerts.map((alert) => (
+              <div
                 className="flex items-center justify-between gap-3 py-3"
-                href={`/app/products/${alert.productId}`}
-                key={`${alert.productId}-${alert.reason}-${String(index)}`}
+                key={alert.productId}
               >
                 <div>
                   <Text className="font-medium">{alert.product}</Text>
@@ -96,10 +96,21 @@ const AchillesHome = () => {
                     {attentionLabels[alert.reason]}
                   </Text>
                 </div>
-                <Badge color={alert.severity === "BLOCKING" ? "red" : "orange"}>
-                  {alert.severity}
-                </Badge>
-              </a>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    color={alert.severity === "BLOCKING" ? "red" : "orange"}
+                  >
+                    {humanStatus(alert.severity)}
+                  </Badge>
+                  <a
+                    href={`/app/achilles-catalog?q=${encodeURIComponent(alert.product)}`}
+                  >
+                    <Button variant="secondary" size="small">
+                      COMPLETAR
+                    </Button>
+                  </a>
+                </div>
+              </div>
             ))}
           </div>
         )}

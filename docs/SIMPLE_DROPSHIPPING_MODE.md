@@ -2,10 +2,10 @@
 
 ## Como importar produto
 
-No Admin, abra **Importar produto**. Para CJ, pesquise o catálogo e escolha o
-item. Para Alibaba, AliExpress ou outra página HTTPS, cole a URL. O sistema cria
-um rascunho próprio da loja: revise título, imagens, custo, preço, fornecedor e
-compliance antes de publicar.
+No Admin, abra **Importar**. Para CJ, pesquise o catálogo e escolha
+**Enviar para Produtos**. Para Alibaba, AliExpress ou outra página HTTPS, cole
+a URL, complete os dados e use **Enviar para Produtos**. O item entra em
+**Produtos** como rascunho.
 
 ## Como alterar preço
 
@@ -15,10 +15,10 @@ registrados; estimativas ausentes não são inventadas.
 
 ## Como publicar
 
-Em **Produtos**, selecione **Publicar**. A publicação só acontece quando os
-gates de preço, fornecedor, disponibilidade e compliance aprovarem o produto.
-Se algo estiver pendente, o produto permanece como rascunho e a tela informa
-que os dados precisam ser completados.
+Em **Produtos**, selecione **Publicar** somente quando o checklist estiver
+completo. Se faltar preço, fornecedor ou revisão, o botão permanece desativado
+e a tela lista o que falta. O preço definido na **Edição rápida** é o preço da
+vitrine.
 
 ## Como processar pedido
 

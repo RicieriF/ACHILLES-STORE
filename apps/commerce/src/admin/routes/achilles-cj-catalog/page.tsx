@@ -120,16 +120,16 @@ const CJCatalogPage = () => {
       );
     },
     onSuccess: () => {
-      setMessage("Rascunho CJ criado. Complete os dados antes de publicar.");
+      setMessage("Rascunho enviado para Produtos. Defina o preço e publique.");
+      window.location.assign("/app/achilles-catalog");
     },
   });
   return (
     <div className="flex flex-col gap-y-3">
       <Container>
-        <Heading level="h1">ACHILLES · CJ CATÁLOGO</Heading>
+        <Heading level="h1">Catálogo CJ</Heading>
         <Text className="text-ui-fg-subtle">
-          Consulta oficial sob demanda. Salvar cria somente Product DRAFT e
-          SupplierOffer.
+          Busque um produto e envie para Produtos como rascunho.
         </Text>
         <div className="mt-4 flex gap-2">
           <Input
@@ -268,7 +268,7 @@ const CJCatalogPage = () => {
                     save.mutate();
                   }}
                 >
-                  SALVAR DRAFT
+                  ENVIAR PARA PRODUTOS
                 </Button>
               </div>
               {stock.data?.stock.map((row, index) => (

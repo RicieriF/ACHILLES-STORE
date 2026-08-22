@@ -11,6 +11,9 @@ as entradas nativas Orders, Drafts, Products, Inventory, Customers, Promotions
 e Price Lists. Essas rotas foram preservadas sem hacks de DOM ou CSS. A
 duplicidade nativa remanescente é uma limitação conhecida do Admin Medusa.
 
+O Playwright usa o banco isolado `achilles_store_e2e`. O Admin operacional
+continua em `achilles_store` e não deve receber fixtures da suíte.
+
 O cleanup de fixtures é sempre explícito:
 
 ```bash

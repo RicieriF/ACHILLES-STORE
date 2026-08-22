@@ -1,8 +1,17 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { Badge, Button, Container, Heading, Table, Text } from "@medusajs/ui";
+import {
+  Badge,
+  Button,
+  Container,
+  Heading,
+  Input,
+  Table,
+  Text,
+} from "@medusajs/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ErrorState, LoadingState } from "../../components/page-state";
+import { humanStatus } from "../../lib/operations";
 import { sdk } from "../../lib/sdk";
 
 type OrderSummary = {
@@ -94,6 +103,12 @@ const OrdersPage = () => {
   const client = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [carrier, setCarrier] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
+  const sandboxTools =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("sandbox") === "1";
   const list = useQuery({
     queryKey: ["achilles-orders"],
     queryFn: () =>
@@ -182,13 +197,15 @@ const OrdersPage = () => {
                     {money(order.total_paid, order.currency)}
                   </Table.Cell>
                   <Table.Cell>
-                    <Badge color="green">{order.payment_status}</Badge>
+                    <Badge color="green">
+                      {humanStatus(order.payment_status)}
+                    </Badge>
                   </Table.Cell>
                   <Table.Cell>
                     <Badge
                       color={order.gate_status === "BLOCKED" ? "red" : "orange"}
                     >
-                      {order.gate_status}
+                      {humanStatus(order.gate_status || order.status)}
                     </Badge>
                   </Table.Cell>
                   <Table.Cell>{order.open_exceptions}</Table.Cell>
@@ -208,8 +225,8 @@ const OrdersPage = () => {
             <Container>
               <Heading level="h2">{detail.data.order.reference}</Heading>
               <Text>
-                Pagamento: {detail.data.order.payment_status} · Status:{" "}
-                {detail.data.order.status}
+                Pagamento: {humanStatus(detail.data.order.payment_status)} ·{" "}
+                {humanStatus(detail.data.order.status)}
               </Text>
               {detail.data.order.items_snapshot.map((item, index) => (
                 <Text key={`${item.productTitle}-${String(index)}`}>
@@ -229,7 +246,7 @@ const OrdersPage = () => {
                         : "red"
                   }
                 >
-                  {detail.data.gate.status}
+                  {humanStatus(detail.data.gate.status)}
                 </Badge>
                 <Badge color="orange">Operação manual</Badge>
               </div>
@@ -338,41 +355,91 @@ const OrdersPage = () => {
                 >
                   APROVAR PEDIDO AO FORNECEDOR
                 </Button>
-                <Button
-                  variant="secondary"
-                  disabled={
-                    detail.data.plan?.status !== "APPROVED" || action.isPending
-                  }
-                  onClick={() => {
-                    action.mutate({
-                      path: `/admin/achilles/orders/${selected}/sandbox`,
-                      body: { action: "CREATE" },
-                    });
-                  }}
-                >
-                  CRIAR PEDIDO TEST/SANDBOX
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={
-                    !detail.data.supplierOrders.some(
-                      (order) => order.status === "CONFIRMED",
-                    ) || action.isPending
-                  }
-                  onClick={() => {
-                    action.mutate({
-                      path: `/admin/achilles/orders/${selected}/sandbox`,
-                      body: { action: "SHIP" },
-                    });
-                  }}
-                >
-                  MARCAR TEST SHIPPED
-                </Button>
+                {sandboxTools && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        detail.data.plan?.status !== "APPROVED" ||
+                        action.isPending
+                      }
+                      onClick={() => {
+                        action.mutate({
+                          path: `/admin/achilles/orders/${selected}/sandbox`,
+                          body: { action: "CREATE" },
+                        });
+                      }}
+                    >
+                      Criar pedido de teste
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        !detail.data.supplierOrders.some(
+                          (order) => order.status === "CONFIRMED",
+                        ) || action.isPending
+                      }
+                      onClick={() => {
+                        action.mutate({
+                          path: `/admin/achilles/orders/${selected}/sandbox`,
+                          body: { action: "SHIP" },
+                        });
+                      }}
+                    >
+                      Marcar teste enviado
+                    </Button>
+                  </>
+                )}
               </div>
               <Text className="mt-3 text-ui-fg-subtle">
                 Pedido ao fornecedor: manual. Alibaba/CJ não recebem pedidos ou
                 pagamentos automaticamente.
               </Text>
+              {detail.data.plan?.status === "APPROVED" && (
+                <div className="mt-6 grid gap-2">
+                  <Heading level="h3">Registrar rastreio</Heading>
+                  <Input
+                    placeholder="Transportadora"
+                    value={carrier}
+                    onChange={(event) => {
+                      setCarrier(event.target.value);
+                    }}
+                  />
+                  <Input
+                    placeholder="Código de rastreio"
+                    value={trackingNumber}
+                    onChange={(event) => {
+                      setTrackingNumber(event.target.value);
+                    }}
+                  />
+                  <Input
+                    placeholder="Link de rastreio (opcional)"
+                    value={trackingUrl}
+                    onChange={(event) => {
+                      setTrackingUrl(event.target.value);
+                    }}
+                  />
+                  <Button
+                    disabled={
+                      action.isPending ||
+                      carrier.trim().length < 2 ||
+                      trackingNumber.trim().length < 4
+                    }
+                    onClick={() => {
+                      action.mutate({
+                        path: `/admin/achilles/orders/${selected}/tracking`,
+                        body: {
+                          carrier: carrier.trim(),
+                          tracking_number: trackingNumber.trim(),
+                          tracking_url: trackingUrl.trim() || null,
+                        },
+                      });
+                    }}
+                  >
+                    REGISTRAR RASTREIO
+                  </Button>
+                </div>
+              )}
               {action.isError && <ErrorState message={String(action.error)} />}
             </Container>
             <Container>
@@ -389,7 +456,8 @@ const OrdersPage = () => {
                 {detail.data.tracking.map((tracking) => (
                   <Text key={tracking.tracking_number}>
                     {tracking.carrier} · {tracking.tracking_number} ·{" "}
-                    {tracking.status} · TEST
+                    {humanStatus(tracking.status)}
+                    {tracking.sandbox ? " · teste" : ""}
                   </Text>
                 ))}
                 {detail.data.exceptions.map((exception) => (

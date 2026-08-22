@@ -29,12 +29,9 @@ function context(
     status,
   };
 }
-describe("imported product publication guard", () => {
-  it("blocks publication of imported products", async () => {
-    const value = context(
-      { status: "published" },
-      { achilles_import_draft_id: "impdraft_1" },
-    );
+describe("product publication guard", () => {
+  it("blocks incomplete products regardless of origin", async () => {
+    const value = context({ status: "published" }, null);
     await blockImportedProductPublication(
       value.request,
       value.response,

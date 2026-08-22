@@ -55,7 +55,7 @@ test("Quick Create accepts incomplete drafts while publication stays gated", asy
       offerId: string | null;
     };
     expect(body.product.status).toBe("draft");
-    expect(body.policy.compliance_status).toBe("PENDING");
+    expect(body.policy.compliance_status).toBe("CLEAR");
     expect(body.policy.commercial_readiness).toBe("DATA_INCOMPLETE");
     expect(body.offerId).toBeNull();
     createdIds.push(body.product.id);
@@ -117,6 +117,7 @@ test("Supplier Hub consulta fixture CJ e salva produto como DRAFT", async ({
           },
         ],
         warehouse: "China Warehouse",
+        test_fixture: true,
       },
     },
   );
@@ -129,7 +130,7 @@ test("Supplier Hub consulta fixture CJ e salva produto como DRAFT", async ({
   expect(imported.status(), JSON.stringify(importedBody)).toBe(201);
   expect(importedBody).toMatchObject({
     product: { status: "draft" },
-    isPrimary: false,
+    isPrimary: true,
   });
   const duplicate = await request.post(
     `${commerceUrl}/admin/achilles/integrations/cj/import`,
@@ -196,7 +197,7 @@ test("importação assistida reconhece URL externa, cria DRAFT e preserva a orig
       provider: "ALIEXPRESS",
       canonical_source_url: sourceUrl,
       status: "NEEDS_REVIEW",
-      compliance_status: "REVIEW_REQUIRED",
+      compliance_status: "CLEAR",
       title_normalized: `[E2E] Produto assistido ${externalId}`,
     },
   });
@@ -279,7 +280,7 @@ test("Admin dropshipping operations center uses real operational data", async ({
     policy: { compliance_status: string };
   };
   expect(created.product.status).toBe("draft");
-  expect(created.policy.compliance_status).toBe("PENDING");
+  expect(created.policy.compliance_status).toBe("CLEAR");
 
   await page.setExtraHTTPHeaders(headers);
   await page.goto(`${commerceUrl}/app/achilles`);
@@ -302,7 +303,7 @@ test("Admin dropshipping operations center uses real operational data", async ({
     .getByTestId("catalog-product-card")
     .filter({ hasText: title });
   await expect(card).toBeVisible();
-  await expect(card.getByText("Pendente de revisão")).toBeVisible();
+  await expect(card.getByText("Requer atenção")).toBeVisible();
   await page.screenshot({
     path: `${artifactDirectory}/catalog-cards.png`,
     fullPage: true,
@@ -313,7 +314,7 @@ test("Admin dropshipping operations center uses real operational data", async ({
     page.getByRole("heading", { name: "Edição rápida" }),
   ).toBeVisible();
   const quickEdit = page.getByTestId("quick-edit-panel");
-  await expect(page.getByText(/retornam o produto a DRAFT/)).toBeVisible();
+  await expect(page.getByText(/voltam o produto para rascunho/)).toBeVisible();
   await expect(quickEdit.getByLabel("Título")).toHaveValue(title);
   const categorySelect = quickEdit.getByRole("combobox", {
     name: "Categoria",
@@ -330,8 +331,7 @@ test("Admin dropshipping operations center uses real operational data", async ({
   ).toBeVisible();
   await expect(quickEdit.getByText("Estoque não gerenciado")).toBeVisible();
   await expect(quickEdit.getByText("Fornecedor não vinculado")).toBeVisible();
-  await expect(quickEdit.getByText("Cadastro incompleto")).toBeVisible();
-  await expect(quickEdit.getByText("Compliance pendente")).toBeVisible();
+  await expect(quickEdit.getByText("Aprovado")).toBeVisible();
   await expect(quickEdit.getByText("Rascunho", { exact: true })).toBeVisible();
   for (const width of [768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -342,7 +342,7 @@ test("Admin dropshipping operations center uses real operational data", async ({
     ).toBe(true);
   }
   await quickEdit.getByLabel("Título").fill(`${title} atualizado`);
-  await quickEdit.getByRole("button", { name: "SALVAR DRAFT" }).click();
+  await quickEdit.getByRole("button", { name: "Salvar rascunho" }).click();
   await expect(quickEdit.getByText("Rascunho atualizado.")).toBeVisible();
   const updated = await request.get(
     `${commerceUrl}/admin/achilles/operations/catalog/${created.product.id}`,
@@ -370,7 +370,7 @@ test("Admin dropshipping operations center uses real operational data", async ({
     await page.getByRole("button", { name: "Continuar" }).click();
   }
   await expect(
-    page.getByRole("button", { name: "SALVAR DRAFT" }),
+    page.getByRole("button", { name: "Salvar rascunho" }),
   ).toBeDisabled();
   for (let step = 5; step > 1; step -= 1) {
     await page.getByRole("button", { name: "Voltar" }).click();
@@ -387,9 +387,9 @@ test("Admin dropshipping operations center uses real operational data", async ({
   await expect(page.getByText("⚠ SKU ausente")).toBeVisible();
   await expect(page.getByText("⚠ Fornecedor não vinculado")).toBeVisible();
   await expect(page.getByText("⚠ Compliance pendente")).toBeVisible();
-  await expect(page.getByText("DRAFT · incompleto")).toBeVisible();
+  await expect(page.getByText("Rascunho incompleto")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "SALVAR DRAFT" }),
+    page.getByRole("button", { name: "Salvar rascunho" }),
   ).toBeEnabled();
   await page.screenshot({ path: `${artifactDirectory}/quick-create.png` });
   await page.getByRole("button", { name: "Fechar" }).click();

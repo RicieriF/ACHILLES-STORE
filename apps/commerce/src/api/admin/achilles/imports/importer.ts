@@ -9,6 +9,7 @@ import { parseFeatureFlags } from "@achilles/config";
 import type { SupplierProductSource } from "@achilles/domain";
 import type SupplierDomainModuleService from "../../../../modules/supplier-domain/service";
 import { recordAudit, safeSnapshot } from "../audit";
+import { testFixtureProviderMetadata } from "../../../../lib/test-fixture";
 import { withImportLock } from "./rate-limit";
 import { identifyAssistedSource } from "./source";
 
@@ -55,6 +56,7 @@ export async function createOrReuseDraft(
     },
     compliance_status: "CLEAR",
     created_by: actor,
+    raw_provider_metadata: testFixtureProviderMetadata({ provider: "ALIBABA" }),
   });
   await recordAudit(service, {
     action: "IMPORT_DRAFT_CREATED",
@@ -114,8 +116,11 @@ async function createOrReuseAssistedDraft(
     alerts: {
       items: ["Importação assistida: complete e revise os dados do produto."],
     },
-    compliance_status: "REVIEW_REQUIRED",
+    compliance_status: "CLEAR",
     created_by: actor,
+    raw_provider_metadata: testFixtureProviderMetadata({
+      provider: source.provider,
+    }),
   });
   await recordAudit(service, {
     action: "ASSISTED_IMPORT_DRAFT_CREATED",

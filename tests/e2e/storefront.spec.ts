@@ -33,7 +33,10 @@ test("public journey reaches a real Medusa cart", async ({
     .getByRole("link", { name: "Lanternas" });
   await Promise.all([page.waitForURL(/\/categoria\//), categoryLink.click()]);
   await expect(page.getByRole("heading", { name: "Lanternas" })).toBeVisible();
-  const firstProduct = page.locator("article").first();
+  const firstProduct = page
+    .locator("article")
+    .filter({ hasText: "Lanterna de Desenvolvimento" })
+    .first();
   await expect(firstProduct).toBeVisible();
   const firstProductLink = firstProduct.getByRole("link").first();
   await expect(firstProductLink).toBeVisible();
@@ -84,9 +87,13 @@ test("public shipping API validates input and sanitizes sourcing data", async ({
     "http://localhost:9000/achilles/store/catalog",
   );
   const payload = (await catalog.json()) as {
-    products: Array<{ variants: Array<{ id: string }> }>;
+    products: Array<{ title: string; variants: Array<{ id: string }> }>;
   };
-  const variantId = payload.products[0]?.variants[0]?.id;
+  const lantern =
+    payload.products.find((item) =>
+      item.title.includes("Lanterna de Desenvolvimento"),
+    ) ?? payload.products[0];
+  const variantId = lantern?.variants[0]?.id;
   expect(variantId).toBeTruthy();
   const response = await request.post(
     "http://localhost:9000/achilles/store/shipping/quote",
@@ -117,7 +124,8 @@ test("search returns public content without sourcing data", async ({
   page,
 }) => {
   await page.goto("/buscar?q=lanterna");
-  await expect(page.locator("article")).toHaveCount(1);
+  await expect(page.locator("article").first()).toBeVisible();
+  await expect(page.getByText("Lanterna de Desenvolvimento")).toBeVisible();
   await expect(page.locator("body")).not.toContainText("Alibaba");
   await expect(page.locator("body")).not.toContainText("SupplierOffer");
   await page.goto("/buscar?q=produto%20privado");
@@ -223,7 +231,13 @@ test("TASK 013 visual evidence at desktop and mobile breakpoints", async ({
     path: `${task15ArtifactDirectory}/lanternas.png`,
     fullPage: true,
   });
-  await page.locator("article").first().getByRole("link").first().click();
+  await page
+    .locator("article")
+    .filter({ hasText: "Lanterna de Desenvolvimento" })
+    .first()
+    .getByRole("link")
+    .first()
+    .click();
   await page.screenshot({
     path: evidencePath("artifacts/task-013/04-product-desktop.png"),
     fullPage: true,
@@ -319,7 +333,13 @@ test("guest checkout reaches Pix pending, signed webhook and paid confirmation",
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
-  await page.locator("article").first().getByRole("link").first().click();
+  await page
+    .locator("article")
+    .filter({ hasText: "Lanterna de Desenvolvimento" })
+    .first()
+    .getByRole("link")
+    .first()
+    .click();
   await page.getByRole("button", { name: "Adicionar à mochila" }).click();
   const cart = page.getByRole("dialog", { name: "Sua mochila" });
   await cart.getByRole("link", { name: "Ir para o checkout" }).click();
@@ -557,7 +577,7 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
   });
 
   await adminLogin(page, auth);
-  await page.goto("http://localhost:9000/app/achilles-orders");
+  await page.goto("http://localhost:9000/app/achilles-orders?sandbox=1");
   await expect(
     page.getByRole("heading", { level: 1, name: "Pedidos", exact: true }),
   ).toBeVisible({ timeout: 20_000 });
@@ -585,15 +605,15 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
   await page
     .getByRole("button", { name: "APROVAR PEDIDO AO FORNECEDOR" })
     .click();
-  await expect(page.getByText("APPROVED").first()).toBeVisible();
-  await page.getByRole("button", { name: "CRIAR PEDIDO TEST/SANDBOX" }).click();
+  await expect(page.getByText("Pedido ao fornecedor").first()).toBeVisible();
+  await page.getByRole("button", { name: "Criar pedido de teste" }).click();
   await page.getByText("Detalhes avançados e auditoria").click();
   await expect(page.getByText(/ACHILLES TEST LOGISTICS/)).toBeVisible();
   await page.screenshot({
     path: evidencePath("artifacts/task-012/sandbox-fulfillment.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "MARCAR TEST SHIPPED" }).click();
+  await page.getByRole("button", { name: "Marcar teste enviado" }).click();
 
   await page.goto(
     `http://localhost:3000/pedido/${paid.reference}?token=${encodeURIComponent(paid.accessToken)}`,
@@ -801,7 +821,13 @@ test("multi-shipment fixture is explicit and contains no supplier data", async (
 
 async function reachPaymentPage(page: import("@playwright/test").Page) {
   await page.goto("/");
-  await page.locator("article").first().getByRole("link").first().click();
+  await page
+    .locator("article")
+    .filter({ hasText: "Lanterna de Desenvolvimento" })
+    .first()
+    .getByRole("link")
+    .first()
+    .click();
   await page.getByRole("button", { name: "Adicionar à mochila" }).click();
   await page
     .getByRole("dialog", { name: "Sua mochila" })
@@ -841,9 +867,13 @@ async function createPaidOrder(request: APIRequestContext): Promise<{
   const commerce = "http://localhost:9000";
   const catalog = await request.get(`${commerce}/achilles/store/catalog`);
   const catalogBody = (await catalog.json()) as {
-    products: Array<{ variants: Array<{ id: string }> }>;
+    products: Array<{ title: string; variants: Array<{ id: string }> }>;
   };
-  const variantId = catalogBody.products[0]?.variants[0]?.id;
+  const lantern =
+    catalogBody.products.find((item) =>
+      item.title.includes("Lanterna de Desenvolvimento"),
+    ) ?? catalogBody.products[0];
+  const variantId = lantern?.variants[0]?.id;
   if (!variantId) throw new Error("Variante pública ausente");
   const cartResponse = await request.post(`${commerce}/achilles/store/carts`);
   const { cart } = (await cartResponse.json()) as { cart: { id: string } };
