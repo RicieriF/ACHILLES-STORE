@@ -24,6 +24,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://achilles:ci_only@localhost:5432/achilles_store
+      E2E_DATABASE_URL: postgres://achilles:ci_only@localhost:5432/achilles_store_e2e
+      OPERATOR_DATABASE_URL: postgres://achilles:ci_only@localhost:5432/achilles_store
       STORE_CORS: http://localhost:3000
       ADMIN_CORS: http://localhost:9000
       AUTH_CORS: http://localhost:3000,http://localhost:9000
