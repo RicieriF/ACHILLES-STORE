@@ -84,6 +84,7 @@ export type CatalogQuery = {
   q?: string;
   limit: number;
   offset: number;
+  filter?: "ALL" | "DRAFT" | "PUBLISHED" | "ATTENTION" | "ARCHIVED";
 };
 
 export type ProviderSummary = {
@@ -187,6 +188,23 @@ left join shipping_data sd on sd.supplier_offer_id = po.offer_id
 where p.deleted_at is null
 `;
 
+function catalogScopeSql(query: CatalogQuery): {
+  sql: string;
+  bindings: unknown[];
+} {
+  const archived =
+    query.filter === "ARCHIVED"
+      ? " and p.metadata->>'achilles_archived' = 'true'"
+      : " and coalesce(p.metadata->>'achilles_archived', 'false') <> 'true'";
+  const status =
+    query.filter === "DRAFT"
+      ? " and p.status = 'draft'"
+      : query.filter === "PUBLISHED"
+        ? " and p.status = 'published'"
+        : "";
+  return { sql: `${archived}${status}`, bindings: [] };
+}
+
 export async function listOperationalProducts(
   database: OperationsDatabase,
   query: CatalogQuery,
@@ -198,19 +216,29 @@ export async function listOperationalProducts(
   const searchBindings: string[] = term
     ? Array<string>(3).fill(`%${term}%`)
     : [];
+  const scope = catalogScopeSql(query);
+  const where = `${searchSql}${scope.sql}`;
+  const bindings = [...searchBindings, ...scope.bindings];
   const [{ rows }, countResult] = await Promise.all([
     database.raw<CatalogRow>(
-      `${catalogCtes}${catalogSelect}${searchSql}
+      `${catalogCtes}${catalogSelect}${where}
        order by p.updated_at desc limit ? offset ?`,
-      [...searchBindings, query.limit, query.offset],
+      [...bindings, query.limit, query.offset],
     ),
     database.raw<CountRow>(
-      `${catalogCtes}select count(*)::int as count from (${catalogSelect}${searchSql}) catalog_count`,
-      searchBindings,
+      `${catalogCtes}select count(*)::int as count from (${catalogSelect}${where}) catalog_count`,
+      bindings,
     ),
   ]);
+  const products = rows.map(mapProduct);
+  if (query.filter === "ATTENTION") {
+    const attention = products.filter(
+      (product) => product.attention.length > 0,
+    );
+    return { products: attention, count: attention.length };
+  }
   return {
-    products: rows.map(mapProduct),
+    products,
     count: countResult.rows[0]?.count ?? 0,
   };
 }
@@ -252,9 +280,9 @@ export async function getDashboard(database: OperationsDatabase) {
         count(*) filter (where retail_price is null)::int as without_price,
         count(*) filter (where manage_inventory and coalesce(stock, 0) <= 0 or availability = 'OUT_OF_STOCK')::int as without_stock,
         count(*) filter (where offer_id is null)::int as without_supplier,
-        count(*) filter (where compliance_status in ('PENDING','REVIEW_REQUIRED'))::int as compliance_pending,
+        count(*) filter (where compliance_status in ('PENDING','REVIEW_REQUIRED') or compliance_status is null)::int as compliance_pending,
         count(*) filter (where compliance_status = 'BLOCKED')::int as blocked
-      from (${catalogSelect}) operational_catalog`),
+      from (${catalogSelect} and coalesce(p.metadata->>'achilles_archived', 'false') <> 'true') operational_catalog`),
       database.raw<ProviderCountRow>(`
       select s.provider,
         count(distinct s.id)::int as suppliers,
@@ -266,18 +294,23 @@ export async function getDashboard(database: OperationsDatabase) {
       where s.deleted_at is null and s.provider in ('ALIBABA','CJ','BRAZIL_STOCK')
       group by s.provider`),
     ]);
-  const products = allProducts.products;
+  const products = allProducts.products.filter((product) => !product.archived);
   const todayRow = today.rows[0];
   const operationalRow = operational.rows[0];
   const alerts = products
-    .flatMap((product) =>
-      product.attention.map((reason) => ({
+    .map((product) => {
+      const reason = [...product.attention].sort(
+        (left, right) => attentionPriority[left] - attentionPriority[right],
+      )[0];
+      if (!reason) return null;
+      return {
         productId: product.id,
         product: product.title,
         reason,
         severity: alertSeverity(reason),
-      })),
-    )
+      };
+    })
+    .filter((alert): alert is NonNullable<typeof alert> => alert !== null)
     .sort(
       (left, right) =>
         attentionPriority[left.reason] - attentionPriority[right.reason],
@@ -338,6 +371,7 @@ function mapProduct(row: CatalogRow): OperationalProduct {
       : null,
     updatedAt: new Date(row.updated_at).toISOString(),
     featured: row.metadata?.featured === true,
+    archived: row.metadata?.achilles_archived === true,
   };
   return enrichOperationalProduct(candidate);
 }

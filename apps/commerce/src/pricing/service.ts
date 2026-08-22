@@ -1,5 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types";
 import { Modules } from "@medusajs/framework/utils";
+import { updateProductVariantsWorkflow } from "@medusajs/medusa/core-flows";
 import { recordAudit, safeSnapshot } from "../api/admin/achilles/audit";
 import { SUPPLIER_DOMAIN_MODULE } from "../modules/supplier-domain";
 import type SupplierDomainModuleService from "../modules/supplier-domain/service";
@@ -245,6 +246,119 @@ export async function approveCostQuote(
     },
   });
   return { quote: updated, snapshot: approvedSnapshot };
+}
+
+export async function applySimpleRetailPrice(
+  container: MedusaContainer,
+  productId: string,
+  priceBrl: number,
+  actorId: string | null,
+): Promise<void> {
+  if (!actorId)
+    throw new PricingError(
+      "ACTOR_REQUIRED",
+      "Administrador autenticado é obrigatório",
+    );
+  if (!Number.isFinite(priceBrl) || priceBrl <= 0)
+    throw new PricingError(
+      "COMMERCIAL_PRICE_INVALID",
+      "Informe um preço válido",
+    );
+  const amount = priceBrl.toFixed(2);
+  const products = container.resolve<{
+    retrieveProduct(
+      id: string,
+      config?: object,
+    ): Promise<{
+      id: string;
+      status: string;
+      variants?: Array<{ id: string }>;
+    }>;
+  }>(Modules.PRODUCT);
+  const product = await products.retrieveProduct(productId, {
+    relations: ["variants"],
+  });
+  const variantIds = product.variants?.map((variant) => variant.id) ?? [];
+  if (variantIds.length) {
+    await updateProductVariantsWorkflow(container).run({
+      input: {
+        selector: { product_id: productId },
+        update: {
+          prices: [{ currency_code: "brl", amount: priceBrl }],
+        },
+      },
+    });
+  }
+  const service = resolveService(container);
+  const offers = await service.listSupplierOffers({ product_id: productId });
+  const offer =
+    offers.find((item) => item.is_primary) ??
+    offers.find((item) => item.status === "ACTIVE") ??
+    offers[0];
+  if (!offer) return;
+  if (!offer.is_primary || offer.status !== "ACTIVE")
+    await service.updateSupplierOffers({
+      id: offer.id,
+      is_primary: true,
+      status: "ACTIVE",
+    });
+  let [quote] = await service.listCostQuotes({ supplier_offer_id: offer.id });
+  quote ??= await service.createCostQuotes({
+    supplier_offer_id: offer.id,
+    status: "INCOMPLETE",
+    source_currency: offer.currency,
+    supplier_unit_cost: offer.unit_cost,
+    moq: offer.moq,
+    assumptions: {
+      items: ["Preço de venda definido pelo operador."],
+    },
+  });
+  const snapshots = await service.listPricingSnapshots({
+    cost_quote_id: quote.id,
+  });
+  const version =
+    snapshots.reduce((maximum, item) => Math.max(maximum, item.version), 0) + 1;
+  const now = new Date();
+  const snapshot = await service.createPricingSnapshots({
+    cost_quote_id: quote.id,
+    version,
+    engine_version: PRICING_ENGINE_VERSION,
+    inputs: { simpleRetailPrice: amount, source: "operator_quick_price" },
+    outputs: {
+      suggestedRetailPrice: amount,
+      approvedRetailPrice: amount,
+    },
+    assumptions: { items: ["Preço de venda definido pelo operador."] },
+    warnings: { items: [] },
+    fx_rate: quote.fx_rate ?? "1",
+    fx_source: quote.fx_source ?? "Preço de venda do operador",
+    fx_timestamp: now,
+    customs_strategy: quote.customs_strategy ?? "MANUAL_QUOTE",
+    calculated_by: actorId,
+    calculated_at: now,
+    approved_by: actorId,
+    approved_at: now,
+    approved_retail_price: amount,
+  });
+  await service.updateCostQuotes({
+    id: quote.id,
+    status: "PRICED",
+    suggested_retail_price: amount,
+    approved_retail_price: amount,
+    approved_at: now,
+    approved_by: actorId,
+    approved_snapshot_id: snapshot.id,
+  });
+  await setPolicyReadiness(service, productId, true);
+  await assertProductStillDraft(container, productId);
+  await recordAudit(service, {
+    action: "SIMPLE_RETAIL_PRICE_APPLIED",
+    entityType: "cost_quote",
+    entityId: quote.id,
+    actorId,
+    summary: `Preço de venda R$ ${amount} definido pelo operador`,
+    metadata: { product_id: productId, snapshot_id: snapshot.id },
+  });
 }
 
 export async function markOfferPricingStale(

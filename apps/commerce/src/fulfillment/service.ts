@@ -657,6 +657,105 @@ export class FulfillmentService {
     );
   }
 
+  async registerTracking(
+    customerOrderId: string,
+    input: {
+      carrier: string;
+      trackingNumber: string;
+      trackingUrl: string | null;
+    },
+    actorId: string | null,
+  ): Promise<void> {
+    const carrier = input.carrier.trim();
+    const trackingNumber = input.trackingNumber.trim();
+    const trackingUrl = input.trackingUrl?.trim() || null;
+    if (carrier.length < 2)
+      throw new FulfillmentError(
+        "CARRIER_REQUIRED",
+        "Informe a transportadora",
+        400,
+      );
+    if (trackingNumber.length < 4)
+      throw new FulfillmentError(
+        "TRACKING_REQUIRED",
+        "Informe o código de rastreio",
+        400,
+      );
+    if (
+      /^TEST(?:-|$)/i.test(trackingNumber) ||
+      trackingNumber.toUpperCase() === "TEST"
+    )
+      throw new FulfillmentError(
+        "TEST_TRACKING_FORBIDDEN",
+        "Não use código de teste em rastreio real",
+        400,
+      );
+    const order = await this.getOrder(customerOrderId);
+    const plan = await this.getPlan(customerOrderId);
+    if (!plan || plan.status !== "APPROVED")
+      throw new FulfillmentError(
+        "APPROVAL_REQUIRED",
+        "Aprove o pedido ao fornecedor antes de registrar o rastreio",
+      );
+    const supplierOrders = await this.database.raw<{
+      id: string;
+      provider: string;
+    }>(
+      "select id, provider from supplier_order where customer_order_id = ? and deleted_at is null order by created_at",
+      [customerOrderId],
+    );
+    const supplierOrder = supplierOrders.rows[0];
+    if (!supplierOrder)
+      throw new FulfillmentError(
+        "SUPPLIER_ORDER_REQUIRED",
+        "Pedido ao fornecedor ainda não foi criado",
+      );
+    await this.database.raw(
+      `insert into fulfillment_tracking (id, supplier_order_id, carrier, tracking_number, tracking_url, status, provider, sandbox, last_event_at)
+       values (?, ?, ?, ?, ?, 'IN_TRANSIT', ?, false, now())
+       on conflict (supplier_order_id) where deleted_at is null do update set
+         carrier = excluded.carrier,
+         tracking_number = excluded.tracking_number,
+         tracking_url = excluded.tracking_url,
+         status = 'IN_TRANSIT',
+         sandbox = false,
+         last_event_at = now(),
+         updated_at = now()`,
+      [
+        `track_${randomUUID().replaceAll("-", "")}`,
+        supplierOrder.id,
+        carrier,
+        trackingNumber,
+        trackingUrl,
+        supplierOrder.provider,
+      ],
+    );
+    await this.database.raw(
+      "update supplier_order set status = 'SHIPPED', shipped_at = coalesce(shipped_at, now()), updated_at = now() where id = ?",
+      [supplierOrder.id],
+    );
+    await this.database.raw(
+      "update customer_order set status = 'SHIPPED', updated_at = now() where id = ?",
+      [order.id],
+    );
+    await audit(
+      this.database,
+      "FULFILLMENT_TRACKING_REGISTERED",
+      order.id,
+      `Rastreio ${trackingNumber} registrado`,
+      {
+        actor_id: actorId,
+        sandbox: false,
+        carrier,
+        tracking_number: trackingNumber,
+      },
+    );
+    await emitFulfillmentEvent(this.container, "fulfillment.shipped", {
+      customer_order_id: order.id,
+      sandbox: false,
+    });
+  }
+
   async listAdmin(): Promise<Record<string, unknown>[]> {
     const result = await this.database.raw<Record<string, unknown>>(
       `select co.id, co.reference, co.status, co.total_paid, co.currency, co.customer_snapshot, co.created_at,

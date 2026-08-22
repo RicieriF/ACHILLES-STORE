@@ -39,6 +39,7 @@ const complete = (): OperationalProductCandidate => ({
   lastSyncAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   featured: false,
+  archived: false,
 });
 
 describe("admin operational product", () => {
@@ -47,6 +48,14 @@ describe("admin operational product", () => {
     expect(result.attention).toEqual([]);
     expect(result.operationalStatus).toBe("READY");
     expect(result.publicationEligible).toBe(true);
+    expect(result.canPublish).toBe(false);
+    expect(result.publicationBlockers).toEqual([]);
+  });
+
+  it("allows publishing a complete draft", () => {
+    const result = enrichOperationalProduct({ ...complete(), status: "draft" });
+    expect(result.canPublish).toBe(true);
+    expect(result.publicationBlockers).toEqual([]);
   });
 
   it("derives incomplete reasons without inventing values", () => {

@@ -67,7 +67,12 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     ContainerRegistrationKeys.QUERY,
   );
 
-  logger.info("Seeding Achilles Store development commerce data...");
+  const includeDemoCatalog = process.env.SEED_DEMO_CATALOG === "true";
+  logger.info(
+    includeDemoCatalog
+      ? "Seeding Achilles Store development structure and demo catalog..."
+      : "Seeding Achilles Store development structure only...",
+  );
 
   const [store] = await storeService.listStores();
   if (!store) {
@@ -179,6 +184,13 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
     throw new Error("Could not create a default shipping profile");
   }
 
+  if (!includeDemoCatalog) {
+    logger.info(
+      "Demo/fictitious catalog skipped. Use pnpm seed:demo to load [FICTÍCIO] products.",
+    );
+    return;
+  }
+
   const existingProducts = await productService.listProducts({
     handle: developmentProducts.map((product) => product.handle),
   });
@@ -211,6 +223,9 @@ export default async function seedDevelopmentData({ container }: ExecArgs) {
             metadata: {
               seed: "TASK_002_DEVELOPMENT_ONLY",
               fulfillment_mode: primaryFulfillmentMode,
+              ...(process.env.APP_ENV === "test"
+                ? { achilles_test_fixture: true }
+                : {}),
             },
             options: [{ title: "Modelo", values: ["Padrão"] }],
             variants: [

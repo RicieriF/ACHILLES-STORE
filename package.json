@@ -22,6 +22,7 @@
     "db:generate": "pnpm --filter @achilles/commerce db:generate",
     "seed": "pnpm seed:dev",
     "seed:dev": "pnpm --filter @achilles/commerce seed:dev",
+    "seed:demo": "pnpm --filter @achilles/commerce seed:demo",
     "seed:e2e": "pnpm --filter @achilles/commerce seed:e2e",
     "seed:production": "pnpm --filter @achilles/commerce seed:production",
     "clean:test-data": "node --experimental-strip-types ./scripts/clean-test-data.cts",

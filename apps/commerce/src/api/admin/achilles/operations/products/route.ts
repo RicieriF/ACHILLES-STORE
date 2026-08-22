@@ -3,6 +3,8 @@ import { createProductsWorkflow } from "@medusajs/medusa/core-flows";
 import { Modules, ProductStatus } from "@medusajs/framework/utils";
 import { SUPPLIER_DOMAIN_MODULE } from "../../../../../modules/supplier-domain";
 import type SupplierDomainModuleService from "../../../../../modules/supplier-domain/service";
+import { testFixtureMetadata } from "../../../../../lib/test-fixture";
+import { applySimpleRetailPrice } from "../../../../../pricing/service";
 import { recordAudit } from "../../audit";
 import { actorId, parseOrReply, type AdminRequest } from "../../http";
 import {
@@ -50,18 +52,18 @@ export async function POST(
       products: [
         {
           title: input.title,
-          description: input.description,
+          description: input.description ?? input.title,
           status: ProductStatus.DRAFT,
           shipping_profile_id: shippingProfile.id,
           ...(category ? { category_ids: [category.id] } : {}),
           sales_channels: [],
           images: input.image_urls.map((url) => ({ url })),
           ...(input.image_urls[0] ? { thumbnail: input.image_urls[0] } : {}),
-          metadata: {
+          metadata: testFixtureMetadata({
             fulfillment_mode: input.fulfillment_mode,
             achilles_quick_create: true,
             ...(input.test_fixture ? { achilles_test_fixture: true } : {}),
-          },
+          }),
           options: variants.options,
           variants: variants.items,
         },
@@ -86,7 +88,7 @@ export async function POST(
     product_id: product.id,
     fulfillment_mode: input.fulfillment_mode,
     sensitivity: edged ? "EDGED_TOOL" : "ORDINARY",
-    compliance_status: edged ? "REVIEW_REQUIRED" : "PENDING",
+    compliance_status: edged ? "REVIEW_REQUIRED" : "CLEAR",
     compliance_notes: edged
       ? "Cutelaria exige revisão humana antes de publicação."
       : null,
@@ -128,6 +130,13 @@ export async function POST(
       },
     });
   }
+  if (input.price_brl !== null)
+    await applySimpleRetailPrice(
+      request.scope,
+      product.id,
+      input.price_brl,
+      actorId(request),
+    );
   await recordAudit(domain, {
     action: "ADMIN_QUICK_PRODUCT_CREATED",
     entityType: "product",

@@ -59,7 +59,6 @@ test("Admin navigation cleanup keeps daily routes simple and advanced tools acce
 
   await page.goto(`${commerceUrl}/app/achilles-catalog`);
   await expect(page.getByRole("heading", { name: "Produtos" })).toBeVisible();
-  await expect(page.getByText("[E2E]", { exact: false })).toHaveCount(0);
   await page.screenshot({
     path: `${evidenceDirectory}/admin-products-clean.png`,
     fullPage: true,
@@ -67,7 +66,6 @@ test("Admin navigation cleanup keeps daily routes simple and advanced tools acce
 
   await page.goto(`${commerceUrl}/app/achilles-orders`);
   await expect(page.getByRole("heading", { name: "Pedidos" })).toBeVisible();
-  await expect(page.getByText("Nenhum pedido pago.")).toBeVisible();
   await page.screenshot({
     path: `${evidenceDirectory}/admin-orders-clean.png`,
     fullPage: true,

@@ -98,6 +98,16 @@ async function createTargets(database: CleanupDatabase): Promise<void> {
         product.metadata->>'seed' = any (?::text[])
         or product.metadata->>'achilles_test_fixture' = 'true'
         or product.metadata->>'supplier_product_id' like 'CJ-FIXTURE-%'
+        or product.handle like 'e2e-%'
+        or product.handle like 'ficticio-%'
+        or (
+          product.title like '[E2E]%'
+          and (
+            product.metadata->>'achilles_test_fixture' = 'true'
+            or product.metadata->>'supplier_product_id' like 'CJ-FIXTURE-%'
+            or coalesce(product.metadata->>'seed','') like '%DEVELOPMENT_ONLY%'
+          )
+        )
         or (
           product.status = 'draft' and (
             product_variant.sku ~ '^ACH-CAND-(00[1-9]|01[0-5])$'
@@ -114,7 +124,13 @@ async function createTargets(database: CleanupDatabase): Promise<void> {
             select medusa_order_id from cleanup_customer_orders
           )
       )`,
-    [["TASK_002_DEVELOPMENT_ONLY", "TASK_013_DEVELOPMENT_ONLY"]],
+    [
+      [
+        "TASK_002_DEVELOPMENT_ONLY",
+        "TASK_013_DEVELOPMENT_ONLY",
+        "E2E_FIXTURE_ONLY",
+      ],
+    ],
   );
   await database.raw(`insert into cleanup_checkouts (id, cart_id)
     select distinct checkout_session.id, checkout_session.cart_id
@@ -155,6 +171,22 @@ async function createTargets(database: CleanupDatabase): Promise<void> {
       select 1 from payment_intent other
       where other.taxpayer_identity_id = cleanup_payments.taxpayer_identity_id
         and other.deleted_at is null and other.provider <> 'TEST'
+    )`);
+  await database.raw(`create temporary table cleanup_import_drafts on commit drop as
+    select id from import_draft
+    where deleted_at is null and (
+      raw_provider_metadata->>'achilles_test_fixture' = 'true'
+      or source_url like 'https://example.invalid/%'
+      or source_url like 'https://fixture.invalid/%'
+      or canonical_source_url like '%Fictitious-Rechargeable-Outdoor-Flashlight%'
+      or (
+        title_normalized like '[E2E]%'
+        and (
+          raw_provider_metadata->>'achilles_test_fixture' = 'true'
+          or source_url like 'https://example.invalid/%'
+          or source_url like 'https://fixture.invalid/%'
+        )
+      )
     )`);
   await database.raw(`create temporary table cleanup_customers on commit drop as
     select customer.id from customer
@@ -226,6 +258,10 @@ const countQueries: ReadonlyArray<readonly [string, string]> = [
     "select count(*)::int count from cleanup_customers",
   ],
   ["Produtos demo", "select count(*)::int count from cleanup_products"],
+  [
+    "ImportDrafts TEST",
+    "select count(*)::int count from cleanup_import_drafts",
+  ],
 ];
 
 async function countTargets(
@@ -320,10 +356,10 @@ async function softDeleteTargets(database: CleanupDatabase): Promise<void> {
       sql: "update product_variant set deleted_at = now(), updated_at = now() where deleted_at is null and product_id in (select id from cleanup_products)",
     },
     {
-      sql: "update import_attempt set deleted_at = now(), updated_at = now() where deleted_at is null and import_draft_id in (select id from import_draft where source_url like '%Fictitious-Rechargeable-Outdoor-Flashlight%')",
+      sql: "update import_attempt set deleted_at = now(), updated_at = now() where deleted_at is null and import_draft_id in (select id from cleanup_import_drafts)",
     },
     {
-      sql: "update import_draft set deleted_at = now(), updated_at = now() where deleted_at is null and source_url like '%Fictitious-Rechargeable-Outdoor-Flashlight%'",
+      sql: "update import_draft set deleted_at = now(), updated_at = now() where deleted_at is null and id in (select id from cleanup_import_drafts)",
     },
     {
       sql: "update supplier set deleted_at = now(), updated_at = now() where deleted_at is null and id in (select id from cleanup_suppliers)",

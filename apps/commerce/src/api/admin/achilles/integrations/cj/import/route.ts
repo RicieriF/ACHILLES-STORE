@@ -4,6 +4,7 @@ import { createProductsWorkflow } from "@medusajs/medusa/core-flows";
 import { z } from "zod";
 import { SUPPLIER_DOMAIN_MODULE } from "../../../../../../modules/supplier-domain";
 import type SupplierDomainModuleService from "../../../../../../modules/supplier-domain/service";
+import { testFixtureMetadata } from "../../../../../../lib/test-fixture";
 import { actorId, parseOrReply, type AdminRequest } from "../../../http";
 import { recordAudit } from "../../../audit";
 
@@ -30,6 +31,7 @@ const schema = z.object({
     .min(1),
   stockSnapshot: z.unknown().optional(),
   warehouse: z.string().optional(),
+  test_fixture: z.boolean().optional().default(false),
 });
 
 export async function POST(
@@ -72,11 +74,12 @@ export async function POST(
           shipping_profile_id: profile.id,
           sales_channels: [],
           images: input.images.map((url) => ({ url })),
-          metadata: {
+          metadata: testFixtureMetadata({
             supplier_provider: "CJ",
             supplier_product_id: input.pid,
             commercial_readiness: "PRICING_REQUIRED",
-          },
+            ...(input.test_fixture ? { achilles_test_fixture: true } : {}),
+          }),
           options: [
             {
               title: "Variação CJ",
@@ -118,10 +121,10 @@ export async function POST(
     unit_cost: input.sourceCost,
     moq: 1,
     availability: "UNKNOWN",
-    status: "INACTIVE",
+    status: "ACTIVE",
     fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
     private_label_supported: false,
-    is_primary: false,
+    is_primary: true,
     freight_metadata: {
       warehouse: input.warehouse ?? null,
       stock_snapshot: input.stockSnapshot ?? null,
@@ -147,8 +150,8 @@ export async function POST(
     product_id: product.id,
     fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
     sensitivity: "ORDINARY",
-    compliance_status: "PENDING",
-    compliance_notes: "Importação CJ exige revisão humana.",
+    compliance_status: "CLEAR",
+    compliance_notes: "Importação CJ exige revisão humana do anúncio.",
     commercial_readiness: "PRICING_REQUIRED",
   });
   await recordAudit(domain, {
@@ -156,12 +159,12 @@ export async function POST(
     entityType: "product",
     entityId: product.id,
     actorId: actorId(request),
-    summary: "Produto CJ salvo como DRAFT",
+    summary: "Produto CJ salvo como rascunho",
     metadata: { provider: "CJ", supplier_offer_id: offer.id },
   });
   response.status(201).json({
     product: { id: product.id, title: product.title, status: product.status },
     supplierOfferId: offer.id,
-    isPrimary: false,
+    isPrimary: true,
   });
 }

@@ -11,6 +11,9 @@ const querySchema = z.object({
   q: z.string().trim().max(160).optional(),
   limit: z.coerce.number().int().min(1).max(48).default(24),
   offset: z.coerce.number().int().min(0).default(0),
+  filter: z
+    .enum(["ALL", "DRAFT", "PUBLISHED", "ATTENTION", "ARCHIVED"])
+    .default("ALL"),
 });
 
 export async function GET(
@@ -26,6 +29,7 @@ export async function GET(
     ...(await listOperationalProducts(database, {
       limit: query.limit,
       offset: query.offset,
+      filter: query.filter,
       ...(query.q ? { q: query.q } : {}),
     })),
     limit: query.limit,

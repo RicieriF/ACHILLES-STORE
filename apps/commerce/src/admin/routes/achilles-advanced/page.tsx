@@ -21,6 +21,11 @@ const tools = [
     "/app/achilles-products-suppliers",
     "Vínculos comerciais internos",
   ],
+  [
+    "Pedidos de teste",
+    "/app/achilles-orders?sandbox=1",
+    "Sandbox de fulfillment",
+  ],
 ] as const;
 
 const AdvancedPage = () => (

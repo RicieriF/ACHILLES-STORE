@@ -4,7 +4,8 @@ import type {
   MedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http";
-import { Modules, ProductStatus } from "@medusajs/framework/utils";
+import { ProductStatus } from "@medusajs/framework/utils";
+import { humanPublicationReasons } from "../admin-operations/publication";
 import { PublicCatalogService } from "../catalog/service";
 import { publicRateLimit } from "./public-rate-limit";
 
@@ -23,28 +24,19 @@ export async function blockImportedProductPublication(
     next();
     return;
   }
-  const products = request.scope.resolve<{
-    retrieveProduct(
-      id: string,
-    ): Promise<{ metadata?: Record<string, unknown> | null }>;
-  }>(Modules.PRODUCT);
-  const product = await products.retrieveProduct(id);
-  if (product.metadata?.achilles_import_draft_id) {
-    const decision = await new PublicCatalogService(request.scope)
-      .canPublishProduct(id)
-      .catch(() => ({
-        eligible: false as const,
-        reasons: ["PUBLICATION_GATE_UNAVAILABLE"],
-      }));
-    if (!decision.eligible) {
-      response.status(409).json({
-        code: "IMPORTED_PRODUCT_PUBLICATION_BLOCKED",
-        message:
-          "Produto importado não atende todos os gates de publicação pública",
-        reasons: decision.reasons,
-      });
-      return;
-    }
+  const decision = await new PublicCatalogService(request.scope)
+    .canPublishProduct(id)
+    .catch(() => ({
+      eligible: false as const,
+      reasons: ["PUBLICATION_GATE_UNAVAILABLE"],
+    }));
+  if (!decision.eligible) {
+    response.status(409).json({
+      code: "PRODUCT_PUBLICATION_BLOCKED",
+      message: "Ainda não pode ser publicado:",
+      reasons: humanPublicationReasons(decision.reasons),
+    });
+    return;
   }
   next();
 }

@@ -75,15 +75,15 @@ const AlibabaCatalogPage = () => {
     onSuccess: (result) => {
       setMessage(
         result.reused
-          ? "Este produto Alibaba já está vinculado. Abra o draft existente."
-          : "Draft Alibaba criado. Revise e aprove antes de criar o produto.",
+          ? "Este produto Alibaba já está na fila de importação."
+          : "Rascunho Alibaba criado. Revise e envie para Produtos.",
       );
     },
   });
   return (
     <div className="flex flex-col gap-y-3">
       <Container>
-        <Heading level="h1">ACHILLES · ALIBABA CATÁLOGO</Heading>
+        <Heading level="h1">Catálogo Alibaba</Heading>
         <Text className="text-ui-fg-subtle">
           Pesquisa geral não disponível para esta autorização. Consulte por
           Product ID ou URL usando somente a API oficial.
@@ -168,7 +168,7 @@ const AlibabaCatalogPage = () => {
                     save.mutate();
                   }}
                 >
-                  SALVAR DRAFT
+                  CRIAR RASCUNHO
                 </Button>
               </div>
             </div>

@@ -10,6 +10,10 @@ describe("Admin operational labels", () => {
     ["BLOCKED", "Bloqueado"],
     ["draft", "Rascunho"],
     ["published", "Publicado"],
+    ["PAID", "Pago"],
+    ["SHIPPED", "Enviado"],
+    ["APPROVAL_REQUIRED", "Aguardando fornecedor"],
+    ["BLOCKING", "Bloqueia venda"],
   ])("translates %s for operators", (status, label) => {
     expect(humanStatus(status)).toBe(label);
   });
