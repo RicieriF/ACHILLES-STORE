@@ -319,7 +319,9 @@ test("paid fixture order can be approved and tracked without sandbox buttons", a
   await expect(
     page.getByRole("heading", { name: "Registrar rastreio" }),
   ).toBeVisible();
-  await expect(page.getByText("Pagamento: Não informado · Enviado")).toBeVisible();
+  await expect(
+    page.getByText("Pagamento: Não informado · Enviado"),
+  ).toBeVisible();
   await page.screenshot({
     path: `${evidenceDirectory}/admin-tracking.png`,
     fullPage: true,
