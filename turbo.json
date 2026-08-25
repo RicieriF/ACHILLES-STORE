@@ -22,6 +22,8 @@
         "PUBLIC_BASE_URL",
         "STOREFRONT_BASE_URL",
         "APP_ENV",
+        "ACHILLES_SIMPLE_ADMIN",
+        "COMMERCE_INTERNAL_URL",
         "VIACEP_ENABLED",
         "PREFER_BRAZIL_STOCK_WHEN_COMPETITIVE"
       ]
@@ -45,6 +47,8 @@
         "PUBLIC_BASE_URL",
         "STOREFRONT_BASE_URL",
         "APP_ENV",
+        "ACHILLES_SIMPLE_ADMIN",
+        "COMMERCE_INTERNAL_URL",
         "VIACEP_ENABLED",
         "PREFER_BRAZIL_STOCK_WHEN_COMPETITIVE"
       ]
