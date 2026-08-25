@@ -1,11 +1,30 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api, session } from "../lib/api";
 
 export default function Login() {
+  return (
+    <Suspense
+      fallback={
+        <div className="login">
+          <div className="login-card">Carregando...</div>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const router = useRouter();
-  const [error, setError] = useState("");
+  const searchParams = useSearchParams();
+  const [error, setError] = useState(
+    searchParams.get("session") === "expired"
+      ? "Sua sessão terminou. Entre novamente."
+      : "",
+  );
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (session.get()) router.replace("/inicio");

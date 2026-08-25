@@ -2,8 +2,9 @@ import { Shell } from "../../components/shell";
 const backend = process.env.NEXT_PUBLIC_COMMERCE_URL ?? "http://localhost:9000";
 const tools = [
   ["Medusa Admin", `${backend}/app`],
-  ["Pricing", `${backend}/app/achilles-pricing`],
+  ["Pricing por produto", `${backend}/app/products`],
   ["Fornecedores", `${backend}/app/achilles-suppliers`],
+  ["CJ avançado", `${backend}/app/achilles-cj-catalog`],
   ["Compliance", `${backend}/app/achilles-compliance`],
   ["Integration Hub", `${backend}/app/achilles-integrations`],
   ["Extensions", `${backend}/app/achilles-extensions`],

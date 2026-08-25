@@ -25,6 +25,7 @@ export type DropshippingStatus =
 export type OperationalProduct = {
   id: string;
   title: string;
+  description?: string | null;
   handle: string;
   status: string;
   thumbnail: string | null;

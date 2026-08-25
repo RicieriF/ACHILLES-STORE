@@ -1,7 +1,9 @@
 export type Product = {
   id: string;
   title: string;
+  description: string | null;
   thumbnail: string | null;
+  sku: string | null;
   retailPrice: number | null;
   status: string;
   archived: boolean;
@@ -10,6 +12,7 @@ export type Product = {
   canPublish: boolean;
   publicationBlockers: string[];
   supplier: string | null;
+  availability: string | null;
   landedCost: number | null;
   marginPercent: number | null;
 };

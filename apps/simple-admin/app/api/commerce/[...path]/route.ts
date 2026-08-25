@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const backend = process.env.COMMERCE_INTERNAL_URL ?? "http://localhost:9000";
+const proxyTimeoutMs = 50_000;
 const allowedPrefixes = [
   "auth/user/emailpass",
   "admin/achilles/",
@@ -39,16 +40,44 @@ async function forward(
   if (!["GET", "HEAD"].includes(request.method)) {
     requestInit.body = await request.text();
   }
-  const response = await fetch(target, requestInit);
-  return new NextResponse(response.body, {
-    status: response.status,
-    headers: {
-      "content-type":
-        response.headers.get("content-type") ?? "application/json",
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), proxyTimeoutMs);
+  try {
+    const response = await fetch(target, {
+      ...requestInit,
+      signal: controller.signal,
+    });
+    return new NextResponse(response.body, {
+      status: response.status,
+      headers: {
+        "content-type":
+          response.headers.get("content-type") ?? "application/json",
+      },
+    });
+  } catch (error) {
+    const timedOut =
+      error instanceof DOMException && error.name === "AbortError";
+    console.error("Simple Admin commerce proxy failed", {
+      method: request.method,
+      pathname,
+      reason: timedOut ? "timeout" : "unavailable",
+    });
+    return NextResponse.json(
+      {
+        code: timedOut ? "COMMERCE_PROXY_TIMEOUT" : "COMMERCE_UNAVAILABLE",
+        message: timedOut
+          ? "Esta operação demorou mais que o esperado. Tente novamente."
+          : "Não consegui conectar aos serviços da Achilles Store.",
+      },
+      { status: timedOut ? 504 : 503 },
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const GET = forward;
 export const POST = forward;
+export const PATCH = forward;
+export const PUT = forward;
 export const DELETE = forward;

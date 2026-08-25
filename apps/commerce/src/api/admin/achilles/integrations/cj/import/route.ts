@@ -1,6 +1,9 @@
 import { Modules, ProductStatus } from "@medusajs/framework/utils";
 import type { MedusaResponse } from "@medusajs/framework/http";
-import { createProductsWorkflow } from "@medusajs/medusa/core-flows";
+import {
+  createProductsWorkflow,
+  deleteProductsWorkflow,
+} from "@medusajs/medusa/core-flows";
 import { z } from "zod";
 import { SUPPLIER_DOMAIN_MODULE } from "../../../../../../modules/supplier-domain";
 import type SupplierDomainModuleService from "../../../../../../modules/supplier-domain/service";
@@ -60,7 +63,8 @@ export async function POST(
   if (existing[0]) {
     response.status(409).json({
       code: "CJ_PRODUCT_ALREADY_IMPORTED",
-      message: "Este produto CJ já possui oferta vinculada.",
+      message: "Este produto já está na sua vitrine.",
+      productId: existing[0].product_id,
     });
     return;
   }
@@ -111,29 +115,49 @@ export async function POST(
     notes: "Fornecedor empresarial deve ser confirmado manualmente.",
     metadata: { platform: "CJ" },
   });
-  const offer = await domain.createSupplierOffers({
-    supplier_id: supplier.id,
-    product_id: product.id,
-    supplier_product_id: input.pid,
-    source_url: input.sourceUrl,
-    canonical_source_url: input.sourceUrl,
-    currency: input.currency,
-    unit_cost: input.sourceCost,
-    moq: 1,
-    availability: "UNKNOWN",
-    status: "ACTIVE",
-    fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
-    private_label_supported: false,
-    is_primary: true,
-    freight_metadata: {
-      warehouse: input.warehouse ?? null,
-      stock_snapshot: input.stockSnapshot ?? null,
-      checked_at: new Date().toISOString(),
-    },
-    last_sync_at: new Date(),
-    sync_status: "SYNCED",
-    raw_source_reference: `CJ:${input.pid}`,
-  });
+  let offer: Awaited<ReturnType<typeof domain.listSupplierOffers>>[number];
+  try {
+    offer = await domain.createSupplierOffers({
+      supplier_id: supplier.id,
+      product_id: product.id,
+      supplier_product_id: input.pid,
+      source_url: input.sourceUrl,
+      canonical_source_url: input.sourceUrl,
+      currency: input.currency,
+      unit_cost: input.sourceCost,
+      moq: 1,
+      availability: "UNKNOWN",
+      status: "ACTIVE",
+      fulfillment_mode: "PRIVATE_LABEL_DROPSHIP",
+      private_label_supported: false,
+      is_primary: true,
+      freight_metadata: {
+        warehouse: input.warehouse ?? null,
+        stock_snapshot: input.stockSnapshot ?? null,
+        checked_at: new Date().toISOString(),
+      },
+      last_sync_at: new Date(),
+      sync_status: "SYNCED",
+      raw_source_reference: `CJ:${input.pid}`,
+    });
+  } catch (error) {
+    const [concurrent] = await domain.listSupplierOffers({
+      supplier_id: supplier.id,
+      supplier_product_id: input.pid,
+    });
+    await deleteProductsWorkflow(request.scope)
+      .run({ input: { ids: [product.id] } })
+      .catch(() => undefined);
+    if (concurrent) {
+      response.status(409).json({
+        code: "CJ_PRODUCT_ALREADY_IMPORTED",
+        message: "Este produto já está na sua vitrine.",
+        productId: concurrent.product_id,
+      });
+      return;
+    }
+    throw error;
+  }
   for (let index = 0; index < input.variants.length; index += 1) {
     const source = input.variants[index];
     const target = product.variants[index];
