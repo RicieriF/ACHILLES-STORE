@@ -144,32 +144,44 @@ export default function AddProduct() {
 }
 function Search({ onBack }: { onBack: () => void }) {
   const [q, setQ] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<
     Array<{
       id: string;
       title: string;
       image: string | null;
       priceMin: string | null;
+      priceMax: string | null;
       currency: string | null;
     }>
   >([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState<string>();
-  async function search(e: FormEvent) {
-    e.preventDefault();
+  async function load(searchKeyword: string, targetPage: number) {
+    setLoading(true);
+    setError("");
     try {
-      const r = await api<{ items: typeof results }>(
-        `admin/achilles/integrations/cj/products?keyword=${encodeURIComponent(q)}`,
+      const r = await api<{ items: typeof results; total: number }>(
+        `admin/achilles/integrations/cj/products?keyword=${encodeURIComponent(searchKeyword)}&page=${targetPage}&size=20`,
       );
       setResults(r.items ?? []);
-    } catch (x) {
-      setError(
-        x instanceof Error
-          ? x.message
-          : "A busca CJ não está disponível agora.",
-      );
+      setTotal(r.total ?? 0);
+      setKeyword(searchKeyword);
+      setPage(targetPage);
+    } catch {
+      setResults([]);
+      setError("Não foi possível consultar a CJ. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
+  }
+  async function search(e: FormEvent) {
+    e.preventDefault();
+    await load(q.trim(), 1);
   }
   async function importProduct(product: (typeof results)[number]) {
     setBusy(product.id);
@@ -245,35 +257,76 @@ function Search({ onBack }: { onBack: () => void }) {
           {message} <a href="/vitrine">Abrir Minha Vitrine</a>
         </div>
       )}
-      <div className="products">
+      {loading && <div className="state">Buscando produtos...</div>}
+      {!loading && keyword && !error && results.length === 0 && (
+        <div className="state">Nenhum produto encontrado.</div>
+      )}
+      {!loading && results.length > 0 && (
+        <div className="toolbar">
+          <strong>{total} produtos</strong>
+          <button
+            type="button"
+            className="secondary"
+            disabled={page === 1}
+            onClick={() => void load(keyword, page - 1)}
+          >
+            ANTERIOR
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={page * 20 >= total}
+            onClick={() => void load(keyword, page + 1)}
+          >
+            PRÓXIMA
+          </button>
+        </div>
+      )}
+      <div className="products" aria-live="polite">
         {results.map((p) => (
           <article className="product-card" key={p.id}>
-            <div className="product-image">
-              {p.image ? (
-                <Image
-                  src={p.image}
-                  alt=""
-                  fill
-                  unoptimized
-                  loader={({ src }) => src}
-                />
-              ) : (
-                "Sem foto"
-              )}
-            </div>
+            <CJCardImage src={p.image} title={p.title} />
             <div className="product-body">
               <h2>{p.title}</h2>
-              <p>Selecione para importar como rascunho.</p>
+              <p>
+                Custo CJ: {p.priceMin ?? "Consultar preço"}
+                {p.priceMax && p.priceMax !== p.priceMin
+                  ? ` – ${p.priceMax}`
+                  : ""}{" "}
+                {p.priceMin ? (p.currency ?? "USD") : ""}
+              </p>
               <button
                 disabled={Boolean(busy)}
                 onClick={() => void importProduct(p)}
               >
-                {busy === p.id ? "IMPORTANDO..." : "IMPORTAR COMO RASCUNHO"}
+                {busy === p.id ? "ADICIONANDO..." : "ADICIONAR"}
               </button>
             </div>
           </article>
         ))}
       </div>
+    </div>
+  );
+}
+
+function CJCardImage({ src, title }: { src: string | null; title: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="product-image">
+      {src && !failed ? (
+        <Image
+          src={src}
+          alt={title}
+          fill
+          unoptimized
+          loader={({ src: imageSource }) => imageSource}
+          onError={() => {
+            setFailed(true);
+          }}
+        />
+      ) : (
+        "Sem foto"
+      )}
     </div>
   );
 }

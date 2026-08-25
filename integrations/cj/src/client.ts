@@ -374,6 +374,7 @@ const cjFixtureFetch: typeof fetch = (input, _init) => {
       : input instanceof URL
         ? input.href
         : input.url;
+  const fixturePage = Number(new URL(url).searchParams.get("page") ?? "1");
   const data = url.includes("authentication")
     ? {
         accessToken: "fixture-token-never-exposed",
@@ -417,16 +418,33 @@ const cjFixtureFetch: typeof fetch = (input, _init) => {
                     productImage: "https://example.invalid/cj-fixture.png",
                   }
                 : {
-                    list: [
+                    pageSize: 20,
+                    pageNumber: fixturePage,
+                    totalRecords: 21,
+                    totalPages: 2,
+                    content: [
                       {
-                        pid: "CJ-FIXTURE-001",
-                        productNameEn: "Fixture CJ EDC Organizer",
-                        productSku: "CJ-FIXTURE-SKU",
-                        sellPrice: "12.50",
-                        productImage: "https://example.invalid/cj-fixture.png",
+                        productList: [
+                          {
+                            id:
+                              fixturePage === 1
+                                ? "CJ-FIXTURE-001"
+                                : "CJ-FIXTURE-PAGE-2",
+                            nameEn:
+                              fixturePage === 1
+                                ? "Fixture CJ Flashlight"
+                                : "Fixture CJ Flashlight Page 2",
+                            sku:
+                              fixturePage === 1
+                                ? "CJ-FIXTURE-SKU"
+                                : "CJ-FIXTURE-PAGE-2-SKU",
+                            sellPrice: "12.50",
+                            bigImage: null,
+                            currency: null,
+                          },
+                        ],
                       },
                     ],
-                    total: 1,
                   };
   return Promise.resolve(
     new Response(JSON.stringify({ result: true, code: 200, data }), {
