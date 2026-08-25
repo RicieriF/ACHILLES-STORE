@@ -6,6 +6,7 @@
     "build": "next build && node ./scripts/prepare-standalone.mjs",
     "dev": "next dev --port 3001",
     "start": "node ./scripts/start.mjs",
+    "test:standalone": "node ./scripts/smoke-standalone.mjs",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
