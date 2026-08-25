@@ -147,6 +147,28 @@ export function integrationCards(): IntegrationCard[] {
       },
     },
     {
+      id: "aliexpress",
+      name: "AliExpress",
+      section: "Fornecedores",
+      status: "NOT_CONFIGURED",
+      health: "NOT_CONFIGURED",
+      detail:
+        "Integração oficial AE-Dropshipper exige aplicação, credenciais e permissões aprovadas. O fluxo assistido por link permanece disponível.",
+      configured: {
+        appKey: false,
+        appSecret: false,
+        accessToken: false,
+      },
+      capabilities: {
+        import: false,
+        freight: false,
+        tracking: false,
+        assistedLink: true,
+        orderCreate: false,
+        orderPay: false,
+      },
+    },
+    {
       id: "brazil-stock",
       name: "BRAZIL_STOCK",
       section: "Fornecedores",
