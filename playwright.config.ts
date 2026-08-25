@@ -66,7 +66,9 @@ export default defineConfig({
         "node --experimental-strip-types ./scripts/ensure-e2e-database.cts && pnpm --filter @achilles/commerce db:migrate && pnpm --filter @achilles/commerce start:e2e",
       url: "http://localhost:9000/ready",
       reuseExistingServer: reuseE2eServers,
-      timeout: 300_000,
+      // Medusa compiles both backend and Admin before production start. On a
+      // cold Windows/CI cache this can legitimately exceed five minutes.
+      timeout: 600_000,
       env: {
         ...process.env,
         ...e2eEnvironment,
@@ -77,6 +79,17 @@ export default defineConfig({
       url: "http://localhost:3000/api/health",
       reuseExistingServer: reuseE2eServers,
       timeout: 120_000,
+    },
+    {
+      command: "pnpm --filter @achilles/simple-admin start",
+      url: "http://localhost:3001/api/health",
+      reuseExistingServer: reuseE2eServers,
+      timeout: 120_000,
+      env: {
+        ...process.env,
+        COMMERCE_INTERNAL_URL: "http://localhost:9000",
+        ACHILLES_SIMPLE_ADMIN: "true",
+      },
     },
   ],
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

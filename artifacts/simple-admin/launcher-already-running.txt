@@ -1,0 +1,181 @@
+
+========================================
+          ACHILLES STORE
+========================================
+
+[OK] Node.js
+[OK] Node 24
+[OK] pnpm
+[OK] Docker
+[OK] Docker daemon
+[OK] Ambiente operacional achilles_store
+[OK] PostgreSQL
+[32minfo[39m:    redisUrl not found. A fake redis instance will be used.
+[32minfo[39m:    No link to load from D:\ACHILLES-STORE\ACHILLES STORE\outdoor-commerce-bootstrap\node_modules\.pnpm\@medusajs+draft-order@2.19._cbd71cd2c738d65f687742c78ccc4d11\node_modules\@medusajs\draft-order\.medusa\server\src\links. skipped.
+[32minfo[39m:    Running migrations...
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: stock_location
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: inventory
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: product
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: pricing
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: promotion
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: customer
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: sales_channel
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: cart
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: region
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: api_key
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: store
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: tax
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: currency
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: payment
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: order
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: settings
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: auth
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: auth
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: auth
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: user
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: fulfillment
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: fulfillment
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: fulfillment
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: notification
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: notification
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: notification
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: cache
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: event_bus
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: workflows
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: locking
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: file
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: file
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: file
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    
+[32minfo[39m:    MODULE: supplier_domain
+[32minfo[39m:    Skipped. Database is up-to-date for module.
+[32minfo[39m:    
+[32minfo[39m:    Migrations completed
+[32minfo[39m:    
+[32minfo[39m:    Syncing links...
+[32minfo[39m:    Database already up-to-date
+[32minfo[39m:    
+[32minfo[39m:    redisUrl not found. A fake redis instance will be used.
+[32minfo[39m:    No link to load from D:\ACHILLES-STORE\ACHILLES STORE\outdoor-commerce-bootstrap\node_modules\.pnpm\@medusajs+draft-order@2.19._cbd71cd2c738d65f687742c78ccc4d11\node_modules\@medusajs\draft-order\.medusa\server\src\links. skipped.
+[33mwarn[39m:    Local Event Bus installed. This is not recommended for production.
+[32minfo[39m:    Locking module: Using "in-memory" as default.
+[32minfo[39m:    No workflow to load from D:\ACHILLES-STORE\ACHILLES STORE\outdoor-commerce-bootstrap\node_modules\.pnpm\@medusajs+draft-order@2.19._cbd71cd2c738d65f687742c78ccc4d11\node_modules\@medusajs\draft-order\.medusa\server\src\workflows. skipped.
+[32minfo[39m:    
+[32minfo[39m:    Pending migration scripts to execute
+[32minfo[39m:    D:\ACHILLES-STORE\ACHILLES STORE\outdoor-commerce-bootstrap\node_modules\.pnpm\@medusajs+medusa@2.19.0_b6bfcce427f0b0ff709a516b49ddc69a\node_modules\@medusajs\medusa\dist\migration-scripts\create-super-admin-role.js
+[32minfo[39m:    
+[32minfo[39m:    Running migration scripts...
+[32minfo[39m:    
+[32minfo[39m:    Migration scripts completed
+[OK] Backend pertence Ã  Achilles Store e serÃ¡ reutilizado
+[OK] Storefront jÃ¡ estÃ¡ disponÃ­vel
+[OK] Admin pertence Ã  Achilles Store e serÃ¡ reutilizado
+[OK] Backend
+[OK] Storefront
+[OK] Admin
+
+ACHILLES STORE PRONTA
+
+Loja: http://localhost:3000
+Admin: http://localhost:3001
+Backend: http://localhost:9000

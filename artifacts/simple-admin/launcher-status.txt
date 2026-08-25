@@ -1,0 +1,9 @@
+
+========================================
+          ACHILLES STORE
+========================================
+
+PostgreSQL     ONLINE   porta 5432
+Backend        ONLINE   porta 9000
+Admin          ONLINE   porta 3001
+Storefront     ONLINE   porta 3000
