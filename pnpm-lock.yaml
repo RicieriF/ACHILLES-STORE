@@ -103,6 +103,40 @@ importers:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.10.13)(vite@7.3.6(@types/node@24.10.13)(jiti@1.21.7)(yaml@2.9.0))
 
+  apps/simple-admin:
+    dependencies:
+      next:
+        specifier: 16.3.1
+        version: 16.3.1(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.10.13)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@types/node':
+        specifier: 24.10.13
+        version: 24.10.13
+      '@types/react':
+        specifier: 19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      eslint:
+        specifier: 9.39.2
+        version: 9.39.2(jiti@1.21.7)(supports-color@8.1.1)
+      eslint-config-next:
+        specifier: 16.3.1
+        version: 16.3.1(@typescript-eslint/parser@8.56.1(eslint@9.39.2(jiti@1.21.7)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3))(eslint@9.39.2(jiti@1.21.7)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.10.13)(vite@7.3.6(@types/node@24.10.13)(jiti@1.21.7)(yaml@2.9.0))
+
   apps/storefront:
     dependencies:
       '@achilles/config':
@@ -4332,6 +4366,7 @@ packages:
   eslint@9.39.2:
     resolution: {integrity: sha512-LEyamqS7W5HB3ujJyvi0HQK/dtVINZvd5mAAp9eT5S/ujByGjiZLCzPcHVzuXbpJDJF/cxwHlfceVUDZ2lnSTw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -7265,7 +7300,7 @@ snapshots:
     dependencies:
       '@babel/code-frame': 7.29.7
       '@babel/generator': 7.29.8
-      '@babel/parser': 7.25.6
+      '@babel/parser': 7.29.8
       '@babel/template': 7.29.7
       '@babel/types': 7.25.6
       debug: 4.4.3(supports-color@8.1.1)

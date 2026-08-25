@@ -1,0 +1,22 @@
+
+========================================
+          ACHILLES STORE
+========================================
+
+[OK] Node.js
+[OK] Node 24
+[OK] pnpm
+[OK] Docker
+[OK] Docker daemon
+[OK] Ambiente operacional achilles_store
+[OK] PostgreSQL
+[OK] Migrations
+[OK] Backend
+[OK] Storefront
+[OK] Admin
+
+ACHILLES STORE PRONTA
+
+Loja: http://localhost:3000
+Admin: http://localhost:9000/app
+Backend: http://localhost:9000

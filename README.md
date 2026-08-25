@@ -12,6 +12,29 @@ operacional fail-closed até a TASK 014.
 
 ## Configuração local
 
+### Forma simples no Windows
+
+**Como configurar pela primeira vez**
+
+1. Clique em `SETUP_ACHILLES.bat`.
+2. Espere a mensagem `CONFIGURAÇÃO CONCLUÍDA`.
+
+**Como ligar**
+
+Clique no atalho **ACHILLES STORE** ou em `START_ACHILLES.bat`. O navegador abre
+a loja em `http://localhost:3000` e o Simple Admin em
+`http://localhost:3001` somente depois dos healthchecks.
+
+**Como desligar**
+
+Clique em **ACHILLES STORE - PARAR** ou em `STOP_ACHILLES.bat`. O banco e os
+volumes nunca são apagados.
+
+Consulte `docs/LOCAL_LAUNCHER.md` para status, restart, atualização, atalhos e
+debug. O Medusa Admin permanece em `http://localhost:9000/app` como fallback.
+
+### Forma técnica
+
 1. Copie `.env.example` para `.env` e substitua os segredos de exemplo por valores locais fortes.
 2. Execute `pnpm install`.
 3. Inicie PostgreSQL com `pnpm docker:up` e aguarde o healthcheck.

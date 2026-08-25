@@ -1,0 +1,15 @@
+
+========================================
+          ACHILLES STORE
+========================================
+
+[OK] Node.js
+[OK] Node 24
+[OK] pnpm
+[OK] Docker
+[OK] Docker daemon
+[OK] Ambiente operacional achilles_store
+ Container outdoor-commerce-bootstrap-postgres-1 Running 
+[OK] PostgreSQL
+[OK] Migrations
+[ERRO] A porta 9000, reservada para Backend, estÃ¡ ocupada por outro aplicativo. Feche-o e tente novamente.
