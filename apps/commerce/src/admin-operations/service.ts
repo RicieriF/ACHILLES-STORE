@@ -16,6 +16,7 @@ export type OperationsDatabase = {
 type CatalogRow = {
   id: string;
   title: string;
+  description: string | null;
   handle: string;
   status: string;
   thumbnail: string | null;
@@ -163,7 +164,7 @@ with variant_base as (
 `;
 
 const catalogSelect = `
-select p.id, p.title, p.handle, p.status, p.thumbnail, p.metadata, p.updated_at,
+select p.id, p.title, p.description, p.handle, p.status, p.thumbnail, p.metadata, p.updated_at,
   vb.sku, coalesce(vb.manage_inventory, false) as manage_inventory,
   ps.stock, pp.retail_price, pp.compare_at_price,
   pc.category, pc.category_id,
@@ -337,6 +338,7 @@ function mapProduct(row: CatalogRow): OperationalProduct {
   const candidate: OperationalProductCandidate = {
     id: row.id,
     title: row.title,
+    description: row.description,
     handle: row.handle,
     status: row.status,
     thumbnail: row.thumbnail,

@@ -14,9 +14,11 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>();
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Order>();
+  const [busy, setBusy] = useState<string>();
+  const [message, setMessage] = useState("");
   const load = () =>
     api<{ orders: Order[] }>("admin/achilles/orders")
-      .then((r) => setOrders(r.orders))
+      .then((r) => setOrders(Array.isArray(r.orders) ? r.orders : []))
       .catch((e) => setError(e.message));
   useEffect(() => {
     void load();
@@ -24,6 +26,10 @@ export default function Orders() {
   async function tracking(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selected) return;
+    if (busy) return;
+    setBusy(selected.id);
+    setError("");
+    setMessage("");
     const d = new FormData(e.currentTarget);
     try {
       await api(`admin/achilles/orders/${selected.id}/tracking`, {
@@ -35,13 +41,16 @@ export default function Orders() {
         }),
       });
       setSelected(undefined);
-      load();
+      await load();
+      setMessage("Rastreio salvo. O pedido foi atualizado.");
     } catch (x) {
       setError(
         x instanceof Error
           ? x.message
           : "Não foi possível registrar o rastreio.",
       );
+    } finally {
+      setBusy(undefined);
     }
   }
   async function approve(order: Order) {
@@ -51,21 +60,29 @@ export default function Orders() {
       )
     )
       return;
+    if (busy) return;
+    setBusy(order.id);
+    setError("");
+    setMessage("");
     try {
       await api(`admin/achilles/orders/${order.id}/approve`, {
         method: "POST",
         body: JSON.stringify({ confirmed: true }),
       });
       await load();
+      setMessage("Pedido aprovado para preparação pelo fornecedor.");
     } catch (x) {
       setError(
         x instanceof Error ? x.message : "Não foi possível aprovar o pedido.",
       );
+    } finally {
+      setBusy(undefined);
     }
   }
   return (
     <Shell title="Pedidos">
       {error && <ErrorState message={error} />}{" "}
+      {message && <div className="message">{message}</div>}
       {!orders ? (
         <Loading />
       ) : (
@@ -95,10 +112,16 @@ export default function Orders() {
                   </td>
                   <td>
                     {o.status === "APPROVAL_REQUIRED" && (
-                      <button onClick={() => void approve(o)}>APROVAR</button>
+                      <button
+                        disabled={Boolean(busy)}
+                        onClick={() => void approve(o)}
+                      >
+                        APROVAR
+                      </button>
                     )}{" "}
                     <button
                       className="secondary"
+                      disabled={Boolean(busy)}
                       onClick={() => setSelected(o)}
                     >
                       REGISTRAR RASTREIO
@@ -118,19 +141,26 @@ export default function Orders() {
           <h2>Registrar rastreio · {selected.reference}</h2>
           <div className="grid">
             <div className="field">
-              <label>Transportadora</label>
-              <input name="carrier" required />
+              <label htmlFor="tracking-carrier">Transportadora</label>
+              <input id="tracking-carrier" name="carrier" required />
             </div>
             <div className="field">
-              <label>Código</label>
-              <input name="number" minLength={4} required />
+              <label htmlFor="tracking-number">Código</label>
+              <input
+                id="tracking-number"
+                name="number"
+                minLength={4}
+                required
+              />
             </div>
             <div className="field">
-              <label>Link</label>
-              <input name="url" type="url" />
+              <label htmlFor="tracking-url">Link</label>
+              <input id="tracking-url" name="url" type="url" />
             </div>
           </div>
-          <button>SALVAR RASTREIO</button>{" "}
+          <button disabled={Boolean(busy)}>
+            {busy ? "SALVANDO..." : "SALVAR RASTREIO"}
+          </button>{" "}
           <button
             type="button"
             className="secondary"

@@ -1,17 +1,39 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Shell, ErrorState } from "../../components/shell";
-import { api } from "../../lib/api";
+import { ApiError, api, LONG_API_TIMEOUT_MS } from "../../lib/api";
+import type { Product } from "../../lib/types";
 type Mode = "choose" | "search" | "link" | "manual";
 export default function AddProduct() {
+  return (
+    <Suspense
+      fallback={
+        <Shell title="Adicionar Produto">
+          <div className="state">Carregando...</div>
+        </Shell>
+      }
+    >
+      <AddProductContent />
+    </Suspense>
+  );
+}
+
+function AddProductContent() {
+  const editId = useSearchParams().get("editar") ?? undefined;
   const [mode, setMode] = useState<Mode>("choose");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [created, setCreated] = useState<string>();
+  const [formBusy, setFormBusy] = useState(false);
+  if (editId) return <EditProduct productId={editId} />;
   async function manual(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (formBusy) return;
+    setFormBusy(true);
     setError("");
+    setMessage("");
     const d = new FormData(e.currentTarget);
     try {
       const r = await api<{ product: { id: string } }>(
@@ -40,10 +62,16 @@ export default function AddProduct() {
       setError(
         x instanceof Error ? x.message : "Não foi possível salvar o rascunho.",
       );
+    } finally {
+      setFormBusy(false);
     }
   }
   async function link(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (formBusy) return;
+    setFormBusy(true);
+    setError("");
+    setMessage("");
     const d = new FormData(e.currentTarget);
     try {
       await api("admin/achilles/imports", {
@@ -57,6 +85,8 @@ export default function AddProduct() {
       setError(
         x instanceof Error ? x.message : "Não foi possível analisar o link.",
       );
+    } finally {
+      setFormBusy(false);
     }
   }
   return (
@@ -100,7 +130,9 @@ export default function AddProduct() {
             <label htmlFor="url">Link do produto</label>
             <input id="url" name="url" type="url" required />
           </div>
-          <button>CRIAR RASCUNHO ASSISTIDO</button>{" "}
+          <button disabled={formBusy}>
+            {formBusy ? "ANALISANDO..." : "CRIAR RASCUNHO ASSISTIDO"}
+          </button>{" "}
           <button
             type="button"
             className="secondary"
@@ -129,7 +161,9 @@ export default function AddProduct() {
             <label htmlFor="price">Preço na minha loja (R$)</label>
             <input id="price" name="price" type="number" min="0" step="0.01" />
           </div>
-          <button>SALVAR RASCUNHO</button>{" "}
+          <button disabled={formBusy}>
+            {formBusy ? "SALVANDO..." : "SALVAR RASCUNHO"}
+          </button>{" "}
           <button
             type="button"
             className="secondary"
@@ -137,6 +171,137 @@ export default function AddProduct() {
           >
             VOLTAR
           </button>
+        </form>
+      )}
+    </Shell>
+  );
+}
+
+function EditProduct({ productId }: { productId: string }) {
+  const [product, setProduct] = useState<Product>();
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api<{ product: Product }>(`admin/achilles/operations/catalog/${productId}`)
+      .then((result) => setProduct(result.product))
+      .catch((reason: unknown) =>
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "Não foi possível abrir o produto.",
+        ),
+      );
+  }, [productId]);
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const data = new FormData(event.currentTarget);
+    try {
+      await api(`admin/achilles/operations/products/${productId}`, {
+        method: "POST",
+        body: JSON.stringify({
+          title: data.get("title"),
+          description: data.get("description") || undefined,
+          image_urls: data.get("image") ? [data.get("image")] : [],
+          price_brl: data.get("price") ? Number(data.get("price")) : null,
+          sku: data.get("sku") || undefined,
+          availability: data.get("availability") || undefined,
+        }),
+      });
+      const refreshed = await api<{ product: Product }>(
+        `admin/achilles/operations/catalog/${productId}`,
+      );
+      setProduct(refreshed.product);
+      setMessage("Produto salvo. As informações foram atualizadas.");
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível salvar o produto.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Shell title="Editar Produto">
+      {error && <ErrorState message={error} />}
+      {message && <div className="message">{message}</div>}
+      {!product ? (
+        !error && <div className="state">Carregando produto...</div>
+      ) : (
+        <form className="card" onSubmit={save}>
+          <div className="field">
+            <label htmlFor="edit-title">Nome *</label>
+            <input
+              id="edit-title"
+              name="title"
+              defaultValue={product.title}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="edit-description">Descrição</label>
+            <textarea
+              id="edit-description"
+              name="description"
+              defaultValue={product.description ?? ""}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="edit-image">Foto principal (URL)</label>
+            <input
+              id="edit-image"
+              name="image"
+              type="url"
+              defaultValue={product.thumbnail ?? ""}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="edit-price">Preço na minha loja (R$)</label>
+            <input
+              id="edit-price"
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              defaultValue={product.retailPrice ?? ""}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="edit-sku">SKU</label>
+            <input id="edit-sku" name="sku" defaultValue={product.sku ?? ""} />
+          </div>
+          <div className="field">
+            <label htmlFor="edit-availability">
+              Disponibilidade do fornecedor
+            </label>
+            <select
+              id="edit-availability"
+              name="availability"
+              defaultValue={product.availability ?? "UNKNOWN"}
+              disabled={!product.supplier}
+            >
+              <option value="UNKNOWN">Não confirmada</option>
+              <option value="IN_STOCK">Disponível</option>
+              <option value="OUT_OF_STOCK">Sem estoque</option>
+            </select>
+          </div>
+          <p className="muted">
+            Fornecedor: {product.supplier ?? "não vinculado"}. O vínculo técnico
+            é mantido no cadastro avançado.
+          </p>
+          <button disabled={busy}>{busy ? "SALVANDO..." : "SALVAR"}</button>{" "}
+          <a
+            className="button secondary"
+            href={`/vitrine?produto=${productId}`}
+          >
+            VOLTAR À VITRINE
+          </a>
         </form>
       )}
     </Shell>
@@ -161,6 +326,8 @@ function Search({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState<string>();
+  const [stage, setStage] = useState("");
+  const [createdProductId, setCreatedProductId] = useState<string>();
   async function load(searchKeyword: string, targetPage: number) {
     setLoading(true);
     setError("");
@@ -168,8 +335,8 @@ function Search({ onBack }: { onBack: () => void }) {
       const r = await api<{ items: typeof results; total: number }>(
         `admin/achilles/integrations/cj/products?keyword=${encodeURIComponent(searchKeyword)}&page=${targetPage}&size=20`,
       );
-      setResults(r.items ?? []);
-      setTotal(r.total ?? 0);
+      setResults(Array.isArray(r.items) ? r.items : []);
+      setTotal(Number.isFinite(r.total) ? r.total : 0);
       setKeyword(searchKeyword);
       setPage(targetPage);
     } catch {
@@ -187,54 +354,72 @@ function Search({ onBack }: { onBack: () => void }) {
     setBusy(product.id);
     setError("");
     setMessage("");
+    setCreatedProductId(undefined);
     try {
-      const [detail, variantResult] = await Promise.all([
-        api<{
-          product: typeof product & {
-            description?: string | null;
-            images?: string[];
-            price?: string | null;
-          };
-        }>(`admin/achilles/integrations/cj/products/${product.id}`),
-        api<{
-          variants: Array<{ id: string; sku: string; title: string }>;
-        }>(
-          `admin/achilles/integrations/cj/variants?pid=${encodeURIComponent(product.id)}`,
-        ),
-      ]);
+      setStage("Buscando detalhes...");
+      const detail = await api<{
+        product: typeof product & {
+          description?: string | null;
+          images?: string[];
+          price?: string | null;
+        };
+      }>(`admin/achilles/integrations/cj/products/${product.id}`, {
+        timeoutMs: LONG_API_TIMEOUT_MS,
+      });
+      setStage("Verificando opções...");
+      const variantResult = await api<{
+        variants: Array<{ id: string; sku: string; title: string }>;
+      }>(
+        `admin/achilles/integrations/cj/variants?pid=${encodeURIComponent(product.id)}`,
+        { timeoutMs: LONG_API_TIMEOUT_MS },
+      );
       if (!variantResult.variants.length) {
         throw new Error(
           "Este produto não possui uma variação disponível para importar.",
         );
       }
-      await api("admin/achilles/integrations/cj/import", {
-        method: "POST",
-        body: JSON.stringify({
-          pid: product.id,
-          title: detail.product.title,
-          description: detail.product.description ?? "",
-          images:
-            detail.product.images ??
-            (detail.product.image ? [detail.product.image] : []),
-          sourceUrl: `https://cjdropshipping.com/product/${product.id}`,
-          currency: detail.product.currency ?? "USD",
-          sourceCost: detail.product.price ?? detail.product.priceMin ?? "0",
-          variants: variantResult.variants.map((variant) => ({
-            vid: variant.id,
-            sku: variant.sku,
-            title: variant.title,
-          })),
-        }),
-      });
-      setMessage(
-        "Rascunho CJ criado. Defina o preço antes de colocar na vitrine.",
+      setStage("Criando rascunho...");
+      const imported = await api<{ product: { id: string } }>(
+        "admin/achilles/integrations/cj/import",
+        {
+          method: "POST",
+          timeoutMs: LONG_API_TIMEOUT_MS,
+          body: JSON.stringify({
+            pid: product.id,
+            title: detail.product.title,
+            description: detail.product.description ?? "",
+            images:
+              detail.product.images ??
+              (detail.product.image ? [detail.product.image] : []),
+            sourceUrl: `https://cjdropshipping.com/product/${product.id}`,
+            currency: detail.product.currency ?? "USD",
+            sourceCost: detail.product.price ?? detail.product.priceMin ?? "0",
+            variants: variantResult.variants.map((variant) => ({
+              vid: variant.id,
+              sku: variant.sku,
+              title: variant.title,
+            })),
+          }),
+        },
       );
+      setCreatedProductId(imported.product.id);
+      setMessage("PRODUTO ADICIONADO");
     } catch (x) {
+      if (x instanceof ApiError && x.code === "CJ_PRODUCT_ALREADY_IMPORTED") {
+        const productId =
+          typeof x.details?.productId === "string"
+            ? x.details.productId
+            : undefined;
+        setCreatedProductId(productId);
+        setMessage("Este produto já está na sua vitrine.");
+        return;
+      }
       setError(
         x instanceof Error ? x.message : "Não foi possível importar o produto.",
       );
     } finally {
       setBusy(undefined);
+      setStage("");
     }
   }
   return (
@@ -254,9 +439,19 @@ function Search({ onBack }: { onBack: () => void }) {
       {error && <ErrorState message={error} />}
       {message && (
         <div className="message">
-          {message} <a href="/vitrine">Abrir Minha Vitrine</a>
+          {message}{" "}
+          <a
+            href={
+              createdProductId
+                ? `/vitrine?produto=${createdProductId}`
+                : "/vitrine"
+            }
+          >
+            ABRIR NA MINHA VITRINE
+          </a>
         </div>
       )}
+      {busy && stage && <div className="state">{stage}</div>}
       {loading && <div className="state">Buscando produtos...</div>}
       {!loading && keyword && !error && results.length === 0 && (
         <div className="state">Nenhum produto encontrado.</div>
@@ -299,7 +494,7 @@ function Search({ onBack }: { onBack: () => void }) {
                 disabled={Boolean(busy)}
                 onClick={() => void importProduct(p)}
               >
-                {busy === p.id ? "ADICIONANDO..." : "ADICIONAR"}
+                {busy === p.id ? stage || "ADICIONANDO..." : "ADICIONAR"}
               </button>
             </div>
           </article>

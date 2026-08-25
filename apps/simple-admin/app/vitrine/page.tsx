@@ -16,32 +16,75 @@ const human = (p: Product) =>
 export default function Showcase() {
   const [items, setItems] = useState<Product[]>();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [filter, setFilter] = useState("ALL");
+  const [busy, setBusy] = useState<string>();
   const load = useCallback(
     () =>
       api<{ products: Product[] }>(
         `admin/achilles/operations/catalog?limit=48&filter=${filter}`,
       )
-        .then((x) => setItems(x.products))
+        .then((x) => {
+          setItems(Array.isArray(x.products) ? x.products : []);
+          setError("");
+        })
         .catch((e) => setError(e.message)),
     [filter],
   );
   useEffect(() => {
     load();
   }, [load]);
-  async function action(id: string, kind: "archive" | "publish") {
+  async function action(
+    id: string,
+    kind: "archive" | "publish" | "pause" | "delete",
+  ) {
+    if (busy) return;
+    if (
+      ["archive", "delete"].includes(kind) &&
+      !window.confirm(
+        kind === "delete"
+          ? "Excluir permanentemente este rascunho quando for seguro?"
+          : "Arquivar este produto e retirá-lo da vitrine?",
+      )
+    )
+      return;
+    setBusy(id);
+    setError("");
+    setMessage("");
     try {
-      await api(`admin/achilles/operations/products/${id}/${kind}`, {
-        method: "POST",
-        body: "{}",
-      });
-      load();
+      if (kind === "pause") {
+        await api(`admin/achilles/operations/products/${id}`, {
+          method: "POST",
+          body: JSON.stringify({ status: "draft" }),
+        });
+      } else if (kind === "delete") {
+        await api(`admin/achilles/operations/products/${id}`, {
+          method: "DELETE",
+        });
+      } else {
+        await api(`admin/achilles/operations/products/${id}/${kind}`, {
+          method: "POST",
+          body: "{}",
+        });
+      }
+      await load();
+      setMessage(
+        kind === "publish"
+          ? "Produto publicado na vitrine."
+          : kind === "pause"
+            ? "Produto pausado."
+            : kind === "archive"
+              ? "Produto arquivado."
+              : "Produto excluído.",
+      );
     } catch (e) {
       setError(
         e instanceof Error
           ? e.message
           : "Não foi possível atualizar o produto.",
       );
+    } finally {
+      setBusy(undefined);
     }
   }
   return (
@@ -68,6 +111,7 @@ export default function Showcase() {
         </button>
       </div>
       {error && <ErrorState message={error} />}{" "}
+      {message && <div className="message">{message}</div>}
       {!items ? (
         <Loading />
       ) : (
@@ -115,17 +159,39 @@ export default function Showcase() {
                   >
                     EDITAR
                   </Link>
-                  {!p.archived && p.canPublish && (
-                    <button onClick={() => action(p.id, "publish")}>
+                  {!p.archived && p.status !== "published" && p.canPublish && (
+                    <button
+                      disabled={Boolean(busy)}
+                      onClick={() => void action(p.id, "publish")}
+                    >
                       ATIVAR
+                    </button>
+                  )}
+                  {!p.archived && p.status === "published" && (
+                    <button
+                      disabled={Boolean(busy)}
+                      className="secondary"
+                      onClick={() => void action(p.id, "pause")}
+                    >
+                      PAUSAR
                     </button>
                   )}
                   {!p.archived && (
                     <button
+                      disabled={Boolean(busy)}
                       className="danger"
-                      onClick={() => action(p.id, "archive")}
+                      onClick={() => void action(p.id, "archive")}
                     >
                       ARQUIVAR
+                    </button>
+                  )}
+                  {!p.archived && p.status !== "published" && (
+                    <button
+                      disabled={Boolean(busy)}
+                      className="danger"
+                      onClick={() => void action(p.id, "delete")}
+                    >
+                      EXCLUIR
                     </button>
                   )}
                 </div>

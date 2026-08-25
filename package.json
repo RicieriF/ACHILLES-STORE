@@ -15,7 +15,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && node --experimental-strip-types --test scripts/e2e-database-url.test.ts",
     "test:integration": "turbo run test:integration",
-    "test:e2e": "playwright test",
+    "test:e2e": "pnpm --filter @achilles/simple-admin test:standalone && playwright test",
     "docker:up": "docker compose up -d postgres",
     "docker:down": "docker compose down",
     "db:migrate": "pnpm --filter @achilles/commerce db:migrate",

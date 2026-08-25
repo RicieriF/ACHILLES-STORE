@@ -18,7 +18,7 @@ export default function Customers() {
   const [error, setError] = useState("");
   useEffect(() => {
     api<{ customers: Customer[] }>("admin/customers?limit=100")
-      .then((r) => setData(r.customers))
+      .then((r) => setData(Array.isArray(r.customers) ? r.customers : []))
       .catch((e) => setError(e.message));
   }, []);
   return (
@@ -60,6 +60,9 @@ export default function Customers() {
               ))}
             </tbody>
           </table>
+          {data.length === 0 && (
+            <div className="state">Nenhum cliente encontrado.</div>
+          )}
         </div>
       )}
     </Shell>
