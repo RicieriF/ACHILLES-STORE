@@ -61,7 +61,7 @@ test("Simple Admin supports a non-technical operator draft workflow", async ({
     path: `${evidence}/simple-admin-add-product.png`,
     fullPage: true,
   });
-  await page.getByRole("button", { name: "BUSCAR PRODUTO" }).click();
+  await page.getByRole("button", { name: "BUSCAR NO CJ" }).click();
   await page.getByLabel("Buscar no CJ").fill("flashlight");
   await page.getByRole("button", { name: "BUSCAR", exact: true }).click();
   await expect(
@@ -163,7 +163,7 @@ test("Simple Admin explains empty and failed CJ searches", async ({ page }) => {
   await page
     .getByRole("link", { name: "ADICIONAR PRODUTO", exact: true })
     .click();
-  await page.getByRole("button", { name: "BUSCAR PRODUTO" }).click();
+  await page.getByRole("button", { name: "BUSCAR NO CJ" }).click();
 
   await page.getByLabel("Buscar no CJ").fill("empty");
   await page.getByRole("button", { name: "BUSCAR", exact: true }).click();
@@ -282,7 +282,7 @@ test("CJ add reports each stage, completes, and explains duplicate import", asyn
   await page
     .getByRole("link", { name: "ADICIONAR PRODUTO", exact: true })
     .click();
-  await page.getByRole("button", { name: "BUSCAR PRODUTO" }).click();
+  await page.getByRole("button", { name: "BUSCAR NO CJ" }).click();
   await page.getByLabel("Buscar no CJ").fill("flashlight");
   await page.getByRole("button", { name: "BUSCAR", exact: true }).click();
   await page.getByRole("button", { name: "ADICIONAR" }).click();
@@ -315,7 +315,7 @@ test("Simple Admin remains usable with malformed, offline, and expired responses
   await page
     .getByRole("link", { name: "ADICIONAR PRODUTO", exact: true })
     .click();
-  await page.getByRole("button", { name: "BUSCAR PRODUTO" }).click();
+  await page.getByRole("button", { name: "BUSCAR NO CJ" }).click();
   await page.route(
     "**/api/commerce/admin/achilles/integrations/cj/products?**",
     async (route) => {

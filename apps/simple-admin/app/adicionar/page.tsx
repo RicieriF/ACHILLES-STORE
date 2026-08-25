@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Shell, ErrorState } from "../../components/shell";
 import { ApiError, api, LONG_API_TIMEOUT_MS } from "../../lib/api";
-import type { Product } from "../../lib/types";
+import type { Product, SupplierIntegration } from "../../lib/types";
 type Mode = "choose" | "search" | "link" | "manual";
 export default function AddProduct() {
   return (
@@ -27,7 +27,31 @@ function AddProductContent() {
   const [error, setError] = useState("");
   const [created, setCreated] = useState<string>();
   const [formBusy, setFormBusy] = useState(false);
+  const [integrations, setIntegrations] = useState<SupplierIntegration[]>([]);
+  const [integrationsLoading, setIntegrationsLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    void api<{ integrations: SupplierIntegration[] }>(
+      "admin/achilles/integrations",
+    )
+      .then((result) => {
+        if (active) setIntegrations(result.integrations);
+      })
+      .catch(() => {
+        if (active) setIntegrations([]);
+      })
+      .finally(() => {
+        if (active) setIntegrationsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   if (editId) return <EditProduct productId={editId} />;
+  const supplier = (id: string) =>
+    integrations.find((integration) => integration.id === id);
+  const cj = supplier("cj");
+  const cjAvailable = cj?.status === "CONNECTED" || cj?.status === "CONFIGURED";
   async function manual(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (formBusy) return;
@@ -106,11 +130,37 @@ function AddProductContent() {
       {mode === "choose" && (
         <>
           <h2>Como você quer adicionar?</h2>
+          {integrationsLoading && (
+            <div className="state">Verificando fornecedores...</div>
+          )}
           <div className="grid">
-            <button className="choice" onClick={() => setMode("search")}>
-              <strong>BUSCAR PRODUTO</strong>
-              <span>CJdropshipping</span>
-            </button>
+            {cjAvailable && (
+              <button className="choice" onClick={() => setMode("search")}>
+                <strong>BUSCAR NO CJ</strong>
+                <span>
+                  CJdropshipping ·{" "}
+                  {cj?.status === "CONNECTED" ? "CONECTADO" : "CONFIGURADO"}
+                </span>
+              </button>
+            )}
+            {!integrationsLoading && !cjAvailable && (
+              <div className="choice" role="status">
+                <strong>CJdropshipping</strong>
+                <span>PRECISA CONFIGURAR</span>
+              </div>
+            )}
+            <div className="choice" role="status">
+              <strong>Alibaba</strong>
+              <span>
+                {supplier("alibaba")?.status === "CONNECTED"
+                  ? "CONECTADO"
+                  : "PRECISA CONFIGURAR · use COLAR LINK"}
+              </span>
+            </div>
+            <div className="choice" role="status">
+              <strong>AliExpress</strong>
+              <span>PRECISA CONFIGURAR · use COLAR LINK</span>
+            </div>
             <button className="choice" onClick={() => setMode("link")}>
               <strong>COLAR LINK</strong>
               <span>Alibaba, AliExpress ou outro</span>

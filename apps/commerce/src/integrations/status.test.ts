@@ -53,6 +53,19 @@ describe("integration status", () => {
       integrationCards().find((item) => item.id === "alibaba")?.status,
     ).toBe("PERMISSION_REQUIRED");
   });
+  it("keeps AliExpress assisted-only until official authorization exists", () => {
+    expect(
+      integrationCards().find((item) => item.id === "aliexpress"),
+    ).toMatchObject({
+      status: "NOT_CONFIGURED",
+      capabilities: {
+        import: false,
+        assistedLink: true,
+        orderCreate: false,
+        orderPay: false,
+      },
+    });
+  });
   it("never returns secret values", () => {
     process.env.MERCADO_PAGO_ACCESS_TOKEN = "secret-value-must-not-leak";
     expect(JSON.stringify(sanitizedOperationalConfig())).not.toContain(

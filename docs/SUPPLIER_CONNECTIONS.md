@@ -1,5 +1,8 @@
 # Conexões de fornecedores
 
+O levantamento de APIs, pré-requisitos e a decisão sobre o MCP oficial da CJ
+estão em [OFFICIAL_SUPPLIER_INTEGRATIONS.md](./OFFICIAL_SUPPLIER_INTEGRATIONS.md).
+
 O Hub em **ACHILLES · Fornecedores** separa a plataforma (CJ/Alibaba), o fornecedor e cada `SupplierOffer`. Um produto pode manter várias ofertas; a importação nunca escolhe automaticamente uma oferta principal.
 
 ## CJdropshipping

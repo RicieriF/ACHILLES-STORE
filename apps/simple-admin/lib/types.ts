@@ -31,3 +31,11 @@ export type Order = {
   customer?: { name?: string; email?: string };
   items?: Array<{ title?: string }>;
 };
+
+export type SupplierIntegration = {
+  id: string;
+  name: string;
+  status: string;
+  detail: string;
+  capabilities: Record<string, boolean>;
+};
