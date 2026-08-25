@@ -151,9 +151,11 @@ const CJCatalogPage = () => {
         </div>
       </Container>
       {catalog.isPending && keyword ? (
-        <LoadingState />
+        <Container>
+          <Text>Buscando produtos...</Text>
+        </Container>
       ) : catalog.isError ? (
-        <ErrorState message={String(catalog.error)} />
+        <ErrorState message="Não foi possível consultar a CJ. Tente novamente." />
       ) : catalog.data ? (
         <Container>
           <div className="flex justify-between">
@@ -179,36 +181,38 @@ const CJCatalogPage = () => {
               </Button>
             </div>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {catalog.data.items.map((item) => (
-              <article key={item.id} className="rounded-lg border p-3">
-                {item.image && (
-                  <img
-                    src={item.image}
-                    alt=""
-                    className="h-40 w-full object-contain"
-                  />
-                )}
-                <Heading level="h3">{item.title}</Heading>
-                <Text>
-                  SKU {item.sku ?? "—"} · ID {item.id}
-                </Text>
-                <Text>
-                  {item.priceMin ?? "—"}–{item.priceMax ?? "—"} {item.currency}
-                </Text>
-                <div className="mt-2 flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setSelected(item);
-                    }}
-                  >
-                    VER DETALHES
-                  </Button>
-                </div>
-              </article>
-            ))}
-          </div>
+          {catalog.data.items.length === 0 ? (
+            <Text className="mt-4">Nenhum produto encontrado.</Text>
+          ) : (
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {catalog.data.items.map((item) => (
+                <article key={item.id} className="rounded-lg border p-3">
+                  <CJCardImage src={item.image} title={item.title} />
+                  <Heading level="h3">{item.title}</Heading>
+                  <Text>
+                    SKU {item.sku ?? "—"} · ID {item.id}
+                  </Text>
+                  <Text>
+                    Custo CJ: {item.priceMin ?? "Consultar preço"}
+                    {item.priceMax && item.priceMax !== item.priceMin
+                      ? ` – ${item.priceMax}`
+                      : ""}{" "}
+                    {item.priceMin ? (item.currency ?? "USD") : ""}
+                  </Text>
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setSelected(item);
+                      }}
+                    >
+                      ADICIONAR
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </Container>
       ) : (
         <Container>
@@ -268,7 +272,7 @@ const CJCatalogPage = () => {
                     save.mutate();
                   }}
                 >
-                  ENVIAR PARA PRODUTOS
+                  ADICIONAR COMO RASCUNHO
                 </Button>
               </div>
               {stock.data?.stock.map((row, index) => (
@@ -293,6 +297,26 @@ const CJCatalogPage = () => {
             </>
           )}
         </Container>
+      )}
+    </div>
+  );
+};
+
+const CJCardImage = ({ src, title }: { src: string | null; title: string }) => {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="flex h-40 w-full items-center justify-center bg-ui-bg-subtle text-ui-fg-subtle">
+      {src && !failed ? (
+        <img
+          src={src}
+          alt={title}
+          className="h-40 w-full object-contain"
+          onError={() => {
+            setFailed(true);
+          }}
+        />
+      ) : (
+        <Text>Sem foto</Text>
       )}
     </div>
   );

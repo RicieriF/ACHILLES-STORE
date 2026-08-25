@@ -32,28 +32,52 @@ export function normalizeCJList(payload: unknown): {
 } {
   const root = record(payload);
   const data = record(root.data);
-  const list = array(data.list ?? data.content ?? root.list);
+  const content = array(data.content);
+  const nestedProducts = content.flatMap((group) =>
+    array(record(group).productList),
+  );
+  const list = nestedProducts.length
+    ? nestedProducts
+    : array(data.productList ?? data.list ?? data.content ?? root.list);
   return {
     items: list.flatMap((value) => {
       const item = record(value);
       const id = text(item.pid, item.productId, item.id);
       if (!id) return [];
+      const priceRange = (text(item.sellPrice) ?? "")
+        .split(/\s*--\s*/)
+        .filter(Boolean);
       return [
         {
           id,
           title:
-            text(item.productNameEn, item.productName, item.name) ?? `CJ ${id}`,
+            text(
+              item.productNameEn,
+              item.productName,
+              item.nameEn,
+              item.name,
+            ) ?? `CJ ${id}`,
           sku: text(item.productSku, item.sku),
           image: text(item.productImage, item.bigImage, item.image),
-          priceMin: text(item.sellPrice, item.discountPrice, item.price),
-          priceMax: text(item.maxSellPrice, item.sellPrice, item.price),
+          priceMin:
+            priceRange[0] ??
+            text(item.discountPrice, item.nowPrice, item.price),
+          priceMax:
+            priceRange[1] ??
+            priceRange[0] ??
+            text(
+              item.maxSellPrice,
+              item.discountPrice,
+              item.nowPrice,
+              item.price,
+            ),
           currency: text(item.currency) ?? "USD",
           supplier: null,
           moq: null,
         },
       ];
     }),
-    total: Number(data.total ?? data.totalRecords ?? root.total ?? list.length),
+    total: Number(data.totalRecords ?? data.total ?? root.total ?? list.length),
   };
 }
 
