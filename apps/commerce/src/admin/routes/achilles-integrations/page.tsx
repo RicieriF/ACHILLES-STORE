@@ -6,6 +6,7 @@ import { sdk } from "../../lib/sdk";
 
 type Status =
   | "CONNECTED"
+  | "ERROR"
   | "CONFIGURED"
   | "DISABLED"
   | "DEGRADED"
@@ -30,7 +31,7 @@ type Data = {
 const color = (status: string): "green" | "orange" | "red" | "grey" =>
   status === "CONNECTED" || status === "CONFIGURED" || status === "HEALTHY"
     ? "green"
-    : status === "UNAVAILABLE"
+    : status === "UNAVAILABLE" || status === "ERROR"
       ? "red"
       : status === "DEGRADED" || status === "NOT_CONFIGURED"
         ? "orange"

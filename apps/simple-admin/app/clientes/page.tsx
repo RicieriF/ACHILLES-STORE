@@ -4,20 +4,17 @@ import { Shell, Loading, ErrorState, money } from "../../components/shell";
 import { api } from "../../lib/api";
 type Customer = {
   id: string;
-  first_name?: string;
-  last_name?: string;
+  name: string | null;
   email: string;
-  metadata?: {
-    order_count?: number;
-    total_spent?: number;
-    last_order_at?: string;
-  };
+  orderCount: number;
+  totalSpent: number;
+  lastOrderAt: string;
 };
 export default function Customers() {
   const [data, setData] = useState<Customer[]>();
   const [error, setError] = useState("");
   useEffect(() => {
-    api<{ customers: Customer[] }>("admin/customers?limit=100")
+    api<{ customers: Customer[] }>("admin/achilles/operations/customers")
       .then((r) => setData(Array.isArray(r.customers) ? r.customers : []))
       .catch((e) => setError(e.message));
   }, []);
@@ -42,18 +39,13 @@ export default function Customers() {
             <tbody>
               {data.map((c) => (
                 <tr key={c.id}>
-                  <td>
-                    {[c.first_name, c.last_name].filter(Boolean).join(" ") ||
-                      "Não informado"}
-                  </td>
+                  <td>{c.name || "Não informado"}</td>
                   <td>{c.email}</td>
-                  <td>{c.metadata?.order_count ?? "—"}</td>
-                  <td>{money(c.metadata?.total_spent)}</td>
+                  <td>{c.orderCount}</td>
+                  <td>{money(c.totalSpent)}</td>
                   <td>
-                    {c.metadata?.last_order_at
-                      ? new Date(c.metadata.last_order_at).toLocaleDateString(
-                          "pt-BR",
-                        )
+                    {c.lastOrderAt
+                      ? new Date(c.lastOrderAt).toLocaleDateString("pt-BR")
                       : "—"}
                   </td>
                 </tr>

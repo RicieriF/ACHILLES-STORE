@@ -29,16 +29,23 @@ function AddProductContent() {
   const [formBusy, setFormBusy] = useState(false);
   const [integrations, setIntegrations] = useState<SupplierIntegration[]>([]);
   const [integrationsLoading, setIntegrationsLoading] = useState(true);
+  const [integrationsError, setIntegrationsError] = useState(false);
   useEffect(() => {
     let active = true;
     void api<{ integrations: SupplierIntegration[] }>(
       "admin/achilles/integrations",
     )
       .then((result) => {
-        if (active) setIntegrations(result.integrations);
+        if (active) {
+          setIntegrations(result.integrations);
+          setIntegrationsError(false);
+        }
       })
       .catch(() => {
-        if (active) setIntegrations([]);
+        if (active) {
+          setIntegrations([]);
+          setIntegrationsError(true);
+        }
       })
       .finally(() => {
         if (active) setIntegrationsLoading(false);
@@ -133,6 +140,9 @@ function AddProductContent() {
           {integrationsLoading && (
             <div className="state">Verificando fornecedores...</div>
           )}
+          {integrationsError && (
+            <ErrorState message="Não foi possível verificar os fornecedores. Atualize a página ou confirme se o Commerce está iniciado." />
+          )}
           <div className="grid">
             {cjAvailable && (
               <button className="choice" onClick={() => setMode("search")}>
@@ -146,7 +156,13 @@ function AddProductContent() {
             {!integrationsLoading && !cjAvailable && (
               <div className="choice" role="status">
                 <strong>CJdropshipping</strong>
-                <span>PRECISA CONFIGURAR</span>
+                <span>
+                  {cj?.status === "ERROR"
+                    ? "ERRO DE CONEXÃO · abra Configurações"
+                    : cj?.status === "DISABLED"
+                      ? "DESATIVADO"
+                      : "PRECISA CONFIGURAR"}
+                </span>
               </div>
             )}
             <div className="choice" role="status">

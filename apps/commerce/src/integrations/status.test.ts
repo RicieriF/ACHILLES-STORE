@@ -44,6 +44,31 @@ describe("integration status", () => {
       },
     });
   });
+  it("uses the official default CJ base URL when credentials exist", () => {
+    process.env.CJ_ENABLED = "true";
+    process.env.CJ_API_KEY = "configured";
+    delete process.env.CJ_BASE_URL;
+    expect(integrationCards().find((item) => item.id === "cj")).toMatchObject({
+      status: "CONFIGURED",
+      configured: { apiKey: true, baseUrl: true },
+    });
+  });
+  it("does not disguise a failed CJ health check as not configured", () => {
+    process.env.CJ_ENABLED = "true";
+    process.env.CJ_API_KEY = "configured";
+    setRuntimeProviderHealth("CJ", {
+      connected: false,
+      checkedAt: new Date().toISOString(),
+      health: "UNAVAILABLE",
+      capabilities: {},
+      errorCode: "CJ_UPSTREAM_ERROR",
+      testMode: false,
+    });
+    expect(integrationCards().find((item) => item.id === "cj")).toMatchObject({
+      status: "ERROR",
+      health: "UNAVAILABLE",
+    });
+  });
   it("uses permission required before Alibaba authorization", () => {
     process.env.ALIBABA_ENABLED = "true";
     process.env.ALIBABA_APP_KEY = "configured";
@@ -81,9 +106,18 @@ describe("integration status", () => {
     process.env.CJ_TEST_MODE = "true";
     process.env.CJ_API_KEY = "fixture-only";
     process.env.CJ_BASE_URL = "https://fixture.invalid";
+    setRuntimeProviderHealth("CJ", {
+      connected: false,
+      checkedAt: new Date().toISOString(),
+      health: "HEALTHY",
+      capabilities: { productImport: true },
+      errorCode: null,
+      testMode: true,
+    });
     const card = integrationCards().find((item) => item.id === "cj");
     expect(card).toMatchObject({
       status: "CONFIGURED",
+      detail: "Fixture E2E configurada; não representa conexão real.",
       configured: { testMode: true },
       capabilities: { orderCreate: false, orderPay: false },
     });

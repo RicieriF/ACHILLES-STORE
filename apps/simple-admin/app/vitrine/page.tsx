@@ -164,7 +164,7 @@ export default function Showcase() {
                       disabled={Boolean(busy)}
                       onClick={() => void action(p.id, "publish")}
                     >
-                      ATIVAR
+                      PUBLICAR
                     </button>
                   )}
                   {!p.archived && p.status === "published" && (
