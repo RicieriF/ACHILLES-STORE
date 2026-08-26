@@ -8,6 +8,12 @@ loadEnvConfig(findWorkspaceRoot(process.cwd()));
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "oss-cf.cjdropshipping.com" },
+      { protocol: "https", hostname: "cf.cjdropshipping.com" },
+    ],
+  },
   async headers() {
     return [
       {

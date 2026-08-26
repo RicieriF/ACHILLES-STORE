@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowIcon } from "../ui/icons";
+import { SafeProductImage } from "./safe-product-image";
 
 export const CategoryCard = ({
   title,
@@ -14,7 +14,12 @@ export const CategoryCard = ({
   href: string;
 }) => (
   <Link href={href} className="category-card">
-    <Image src={image} alt="" fill sizes="(max-width: 720px) 90vw, 33vw" />
+    <SafeProductImage
+      src={image}
+      alt=""
+      fill
+      sizes="(max-width: 720px) 90vw, 33vw"
+    />
     <span className="category-card__shade" />
     <span className="category-card__copy">
       <small>{subtitle}</small>
