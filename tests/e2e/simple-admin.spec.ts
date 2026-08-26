@@ -493,6 +493,22 @@ test("manual draft edits persist and safe deletion refreshes without F5", async 
 test("all Simple Admin destinations remain reachable on mobile", async ({
   page,
 }) => {
+  await page.route("**/*", async (route) => {
+    const request = route.request();
+    const hostname = new URL(request.url()).hostname;
+    if (
+      request.resourceType() === "image" &&
+      !["localhost", "127.0.0.1"].includes(hostname)
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "image/svg+xml",
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
+      });
+      return;
+    }
+    await route.continue();
+  });
   const unexpectedConsole: string[] = [];
   const pageErrors: string[] = [];
   page.on("console", (message) => {
