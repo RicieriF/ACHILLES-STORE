@@ -15,6 +15,15 @@ export type Product = {
   availability: string | null;
   landedCost: number | null;
   marginPercent: number | null;
+  category: string | null;
+  categoryId: string | null;
+};
+
+export type ProductCategory = {
+  id: string;
+  name: string;
+  handle: string;
+  parent: { id: string; name: string } | null;
 };
 
 export type Dashboard = {
