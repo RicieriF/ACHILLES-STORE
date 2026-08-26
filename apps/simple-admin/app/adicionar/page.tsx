@@ -4,7 +4,11 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Shell, ErrorState } from "../../components/shell";
 import { ApiError, api, LONG_API_TIMEOUT_MS } from "../../lib/api";
-import type { Product, SupplierIntegration } from "../../lib/types";
+import type {
+  Product,
+  ProductCategory,
+  SupplierIntegration,
+} from "../../lib/types";
 type Mode = "choose" | "search" | "link" | "manual";
 export default function AddProduct() {
   return (
@@ -30,6 +34,7 @@ function AddProductContent() {
   const [integrations, setIntegrations] = useState<SupplierIntegration[]>([]);
   const [integrationsLoading, setIntegrationsLoading] = useState(true);
   const [integrationsError, setIntegrationsError] = useState(false);
+  const categories = useCategories();
   useEffect(() => {
     let active = true;
     void api<{ integrations: SupplierIntegration[] }>(
@@ -54,7 +59,7 @@ function AddProductContent() {
       active = false;
     };
   }, []);
-  if (editId) return <EditProduct productId={editId} />;
+  if (editId) return <EditProduct productId={editId} categories={categories} />;
   const supplier = (id: string) =>
     integrations.find((integration) => integration.id === id);
   const cj = supplier("cj");
@@ -83,6 +88,7 @@ function AddProductContent() {
             sku: null,
             fulfillment_mode: "GENERIC_DROPSHIP",
             availability: "UNKNOWN",
+            category_id: d.get("category") || null,
             variants: [],
           }),
         },
@@ -227,6 +233,7 @@ function AddProductContent() {
             <label htmlFor="price">Preço na minha loja (R$)</label>
             <input id="price" name="price" type="number" min="0" step="0.01" />
           </div>
+          <CategoryField id="category" categories={categories} />
           <button disabled={formBusy}>
             {formBusy ? "SALVANDO..." : "SALVAR RASCUNHO"}
           </button>{" "}
@@ -243,7 +250,13 @@ function AddProductContent() {
   );
 }
 
-function EditProduct({ productId }: { productId: string }) {
+function EditProduct({
+  productId,
+  categories,
+}: {
+  productId: string;
+  categories: CategoryState;
+}) {
   const [product, setProduct] = useState<Product>();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -276,6 +289,7 @@ function EditProduct({ productId }: { productId: string }) {
           price_brl: data.get("price") ? Number(data.get("price")) : null,
           sku: data.get("sku") || undefined,
           availability: data.get("availability") || undefined,
+          category_id: data.get("category") || undefined,
         }),
       });
       const refreshed = await api<{ product: Product }>(
@@ -342,6 +356,11 @@ function EditProduct({ productId }: { productId: string }) {
             <label htmlFor="edit-sku">SKU</label>
             <input id="edit-sku" name="sku" defaultValue={product.sku ?? ""} />
           </div>
+          <CategoryField
+            id="edit-category"
+            categories={categories}
+            currentId={product.categoryId}
+          />
           <div className="field">
             <label htmlFor="edit-availability">
               Disponibilidade do fornecedor
@@ -371,6 +390,81 @@ function EditProduct({ productId }: { productId: string }) {
         </form>
       )}
     </Shell>
+  );
+}
+
+type CategoryState = {
+  items: ProductCategory[];
+  loading: boolean;
+  error: string;
+};
+
+function useCategories(): CategoryState {
+  const [state, setState] = useState<CategoryState>({
+    items: [],
+    loading: true,
+    error: "",
+  });
+  useEffect(() => {
+    let active = true;
+    void api<{ categories: ProductCategory[] }>(
+      "admin/achilles/operations/categories",
+    )
+      .then((result) => {
+        if (active)
+          setState({
+            items: Array.isArray(result.categories) ? result.categories : [],
+            loading: false,
+            error: "",
+          });
+      })
+      .catch(() => {
+        if (active)
+          setState({
+            items: [],
+            loading: false,
+            error: "Não foi possível carregar as categorias.",
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return state;
+}
+
+function CategoryField({
+  id,
+  categories,
+  currentId,
+}: {
+  id: string;
+  categories: CategoryState;
+  currentId?: string | null;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>Categoria</label>
+      {categories.loading ? (
+        <div className="state">Carregando categorias...</div>
+      ) : categories.items.length ? (
+        <select id={id} name="category" defaultValue={currentId ?? ""}>
+          <option value="">Selecione uma categoria</option>
+          {categories.items.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.parent
+                ? `${category.parent.name} › ${category.name}`
+                : category.name}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <div className="state">
+          {categories.error || "Nenhuma categoria disponível."}{" "}
+          <a href="/avancado">ABRIR CONFIGURAÇÃO DE CATEGORIAS</a>
+        </div>
+      )}
+    </div>
   );
 }
 function Search({ onBack }: { onBack: () => void }) {

@@ -83,6 +83,51 @@ test("Simple Admin supports a non-technical operator draft workflow", async ({
       exact: true,
     }),
   ).toBeVisible();
+  const importedCard = page.getByRole("article").filter({
+    has: page.getByRole("heading", {
+      name: "Fixture CJ EDC Organizer",
+      exact: true,
+    }),
+  });
+  await expect(importedCard.getByText("Escolha uma categoria")).toBeVisible();
+  await importedCard.getByRole("link", { name: "EDITAR" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Editar Produto" }),
+  ).toBeVisible();
+  await page.getByLabel("Categoria").selectOption({ label: "Lanternas" });
+  await page.getByLabel("Preço na minha loja (R$)").fill("149.90");
+  await page.getByRole("button", { name: "SALVAR", exact: true }).click();
+  await expect(page.getByText("Produto salvo.")).toBeVisible();
+  await page.getByRole("link", { name: "VOLTAR À VITRINE" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Minha Vitrine" }),
+  ).toBeVisible();
+  const categorizedCard = page.getByRole("article").filter({
+    has: page.getByRole("heading", {
+      name: "Fixture CJ EDC Organizer",
+      exact: true,
+    }),
+  });
+  await expect(categorizedCard.getByText("Escolha uma categoria")).toHaveCount(
+    0,
+  );
+  await expect(
+    categorizedCard.getByRole("button", { name: "PUBLICAR" }),
+  ).toBeVisible();
+  await categorizedCard.getByRole("link", { name: "EDITAR" }).click();
+  await expect(page.getByLabel("Categoria")).toHaveValue(/.+/);
+  await expect(
+    page.getByLabel("Categoria").locator("option:checked"),
+  ).toHaveText("Lanternas");
+  await page
+    .getByLabel("Categoria")
+    .selectOption({ label: "Camping & Outdoor" });
+  await page.getByRole("button", { name: "SALVAR", exact: true }).click();
+  await page.getByRole("link", { name: "VOLTAR À VITRINE" }).click();
+  await categorizedCard.getByRole("link", { name: "EDITAR" }).click();
+  await expect(
+    page.getByLabel("Categoria").locator("option:checked"),
+  ).toHaveText("Camping & Outdoor");
 
   await page
     .getByRole("link", { name: "ADICIONAR PRODUTO", exact: true })
@@ -173,6 +218,29 @@ test("Simple Admin explains empty and failed CJ searches", async ({ page }) => {
   await page.getByRole("button", { name: "BUSCAR", exact: true }).click();
   await expect(
     page.getByText("Não foi possível consultar a CJ. Tente novamente."),
+  ).toBeVisible();
+});
+
+test("Simple Admin explains when no category is available", async ({
+  page,
+}) => {
+  await page.route(
+    "**/api/commerce/admin/achilles/operations/categories",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ categories: [] }),
+      }),
+  );
+  await login(page);
+  await page
+    .getByRole("link", { name: "ADICIONAR PRODUTO", exact: true })
+    .click();
+  await page.getByRole("button", { name: "CADASTRAR MANUALMENTE" }).click();
+  await expect(page.getByText("Nenhuma categoria disponível.")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "ABRIR CONFIGURAÇÃO DE CATEGORIAS" }),
   ).toBeVisible();
 });
 
