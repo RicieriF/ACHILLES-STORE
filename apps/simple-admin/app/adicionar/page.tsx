@@ -394,6 +394,20 @@ function Search({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState<string>();
   const [stage, setStage] = useState("");
   const [createdProductId, setCreatedProductId] = useState<string>();
+  const [importResults, setImportResults] = useState<
+    Record<
+      string,
+      {
+        state: "IMPORTING" | "ADDED" | "DUPLICATE" | "ERROR";
+        message: string;
+        productId?: string;
+      }
+    >
+  >({});
+  const setProductResult = (
+    productId: string,
+    result: (typeof importResults)[string],
+  ) => setImportResults((current) => ({ ...current, [productId]: result }));
   async function load(searchKeyword: string, targetPage: number) {
     setLoading(true);
     setError("");
@@ -423,6 +437,10 @@ function Search({ onBack }: { onBack: () => void }) {
     setCreatedProductId(undefined);
     try {
       setStage("Buscando detalhes...");
+      setProductResult(product.id, {
+        state: "IMPORTING",
+        message: "Buscando detalhes...",
+      });
       const detail = await api<{
         product: typeof product & {
           description?: string | null;
@@ -433,6 +451,10 @@ function Search({ onBack }: { onBack: () => void }) {
         timeoutMs: LONG_API_TIMEOUT_MS,
       });
       setStage("Verificando opções...");
+      setProductResult(product.id, {
+        state: "IMPORTING",
+        message: "Verificando opções...",
+      });
       const variantResult = await api<{
         variants: Array<{ id: string; sku: string; title: string }>;
       }>(
@@ -445,6 +467,10 @@ function Search({ onBack }: { onBack: () => void }) {
         );
       }
       setStage("Criando rascunho...");
+      setProductResult(product.id, {
+        state: "IMPORTING",
+        message: "Criando rascunho...",
+      });
       const imported = await api<{ product: { id: string } }>(
         "admin/achilles/integrations/cj/import",
         {
@@ -470,6 +496,11 @@ function Search({ onBack }: { onBack: () => void }) {
       );
       setCreatedProductId(imported.product.id);
       setMessage("PRODUTO ADICIONADO");
+      setProductResult(product.id, {
+        state: "ADDED",
+        message: "✓ PRODUTO ADICIONADO",
+        productId: imported.product.id,
+      });
     } catch (x) {
       if (x instanceof ApiError && x.code === "CJ_PRODUCT_ALREADY_IMPORTED") {
         const productId =
@@ -478,11 +509,19 @@ function Search({ onBack }: { onBack: () => void }) {
             : undefined;
         setCreatedProductId(productId);
         setMessage("Este produto já está na sua vitrine.");
+        setProductResult(product.id, {
+          state: "DUPLICATE",
+          message: "ESTE PRODUTO JÁ ESTÁ NA VITRINE",
+          ...(productId ? { productId } : {}),
+        });
         return;
       }
-      setError(
-        x instanceof Error ? x.message : "Não foi possível importar o produto.",
-      );
+      const humanMessage = importErrorMessage(x);
+      setError(humanMessage);
+      setProductResult(product.id, {
+        state: "ERROR",
+        message: `ERRO: ${humanMessage}`,
+      });
     } finally {
       setBusy(undefined);
       setStage("");
@@ -544,30 +583,68 @@ function Search({ onBack }: { onBack: () => void }) {
         </div>
       )}
       <div className="products" aria-live="polite">
-        {results.map((p) => (
-          <article className="product-card" key={p.id}>
-            <CJCardImage src={p.image} title={p.title} />
-            <div className="product-body">
-              <h2>{p.title}</h2>
-              <p>
-                Custo CJ: {p.priceMin ?? "Consultar preço"}
-                {p.priceMax && p.priceMax !== p.priceMin
-                  ? ` – ${p.priceMax}`
-                  : ""}{" "}
-                {p.priceMin ? (p.currency ?? "USD") : ""}
-              </p>
-              <button
-                disabled={Boolean(busy)}
-                onClick={() => void importProduct(p)}
-              >
-                {busy === p.id ? stage || "ADICIONANDO..." : "ADICIONAR"}
-              </button>
-            </div>
-          </article>
-        ))}
+        {results.map((p) => {
+          const importResult = importResults[p.id];
+          return (
+            <article className="product-card" key={p.id}>
+              <CJCardImage src={p.image} title={p.title} />
+              <div className="product-body">
+                <h2>{p.title}</h2>
+                <p>
+                  Custo CJ: {p.priceMin ?? "Consultar preço"}
+                  {p.priceMax && p.priceMax !== p.priceMin
+                    ? ` – ${p.priceMax}`
+                    : ""}{" "}
+                  {p.priceMin ? (p.currency ?? "USD") : ""}
+                </p>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() => void importProduct(p)}
+                >
+                  {busy === p.id ? stage || "ADICIONANDO..." : "ADICIONAR"}
+                </button>
+                {importResult && (
+                  <div
+                    className={
+                      importResult.state === "ERROR" ? "error" : "message"
+                    }
+                    role="status"
+                  >
+                    {importResult.message}
+                    {importResult.productId && (
+                      <>
+                        {" "}
+                        <a href={`/vitrine?produto=${importResult.productId}`}>
+                          ABRIR NA VITRINE
+                        </a>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </div>
   );
+}
+
+function importErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === "SHIPPING_PROFILE_MISSING")
+      return "A estrutura de entrega da loja está incompleta. Execute a atualização da Achilles Store e tente novamente.";
+    if (error.status === 401) return "Sua sessão terminou. Entre novamente.";
+    if (error.status === 409)
+      return error.message || "Este produto já está na sua vitrine.";
+    if (error.status === 400 || error.status === 422)
+      return "Os dados recebidos da CJ estão incompletos ou inválidos para importação.";
+    if (error.status !== null && error.status >= 500)
+      return "A Achilles Store não conseguiu criar o rascunho. Tente novamente; se o problema continuar, consulte o suporte.";
+  }
+  return error instanceof Error
+    ? error.message
+    : "Não foi possível adicionar este produto. Tente novamente.";
 }
 
 function CJCardImage({ src, title }: { src: string | null; title: string }) {

@@ -1,6 +1,9 @@
 import type { ExecArgs } from "@medusajs/framework/types";
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
-import { createProductCategoriesWorkflow } from "@medusajs/medusa/core-flows";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import {
+  createProductCategoriesWorkflow,
+  createShippingProfilesWorkflow,
+} from "@medusajs/medusa/core-flows";
 
 const structuralCategories = [
   { name: "Lanternas", handle: "lanternas" },
@@ -22,6 +25,7 @@ export default async function seedProductionStructure({ container }: ExecArgs) {
   const query = container.resolve<CatalogQuery>(
     ContainerRegistrationKeys.QUERY,
   );
+  const fulfillment = container.resolve(Modules.FULFILLMENT);
   const { data: existing } = await query.graph({
     entity: "product_category",
     fields: ["handle"],
@@ -45,7 +49,20 @@ export default async function seedProductionStructure({ container }: ExecArgs) {
     });
   }
 
+  const [shippingProfile] = await fulfillment.listShippingProfiles({
+    type: "default",
+  });
+  if (!shippingProfile) {
+    const { result } = await createShippingProfilesWorkflow(container).run({
+      input: {
+        data: [{ name: "Perfil de entrega padrão", type: "default" }],
+      },
+    });
+    if (!result[0])
+      throw new Error("Could not create a default shipping profile");
+  }
+
   logger.info(
-    `Production structure ready: ${String(structuralCategories.length - missing.length)} existing, ${String(missing.length)} created; no products, orders, payments, or suppliers created.`,
+    `Production structure ready: ${String(structuralCategories.length - missing.length)} categories existing, ${String(missing.length)} created; shipping profile ${shippingProfile ? "existing" : "created"}; no products, orders, payments, or suppliers created.`,
   );
 }
