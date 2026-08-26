@@ -23,4 +23,18 @@ describe("Windows launcher", () => {
     expect(openAdmin).toBeGreaterThan(openStore);
     expect(launcher).toMatch(/timeout/i);
   });
+
+  it("prepares the idempotent store structure after migrations", () => {
+    const launcher = readFileSync(
+      join(
+        findWorkspaceRoot(process.cwd()),
+        "scripts",
+        "launcher",
+        "achilles-launcher.ps1",
+      ),
+      "utf8",
+    );
+    expect(launcher).toMatch(/pnpm db:migrate[\s\S]*pnpm seed:production/);
+    expect(launcher).toContain("Migrations e estrutura mínima");
+  });
 });

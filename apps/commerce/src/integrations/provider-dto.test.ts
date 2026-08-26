@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normalizeAlibabaProduct, normalizeCJList } from "./provider-dto";
+import {
+  normalizeAlibabaProduct,
+  normalizeCJList,
+  normalizeCJProduct,
+} from "./provider-dto";
 
 describe("provider DTOs", () => {
   const realCJListV2Shape = {
@@ -68,6 +72,22 @@ describe("provider DTOs", () => {
         },
       }),
     ).toEqual({ items: [], total: 0 });
+  });
+
+  it("normalizes the single-hyphen price range returned by CJ product detail", () => {
+    expect(
+      normalizeCJProduct({
+        data: {
+          pid: "CJ-REAL-SHAPE",
+          productNameEn: "Emergency flashlight",
+          sellPrice: "4.49-5.43",
+        },
+      }),
+    ).toMatchObject({
+      price: "4.49",
+      priceMin: "4.49",
+      priceMax: "5.43",
+    });
   });
 
   it("maps CJ catalog data to visual cards", () => {

@@ -13,6 +13,12 @@ const text = (...values: unknown[]): string | null => {
 };
 const number = (value: unknown): number | null =>
   Number.isFinite(Number(value)) ? Number(value) : null;
+const priceRange = (value: unknown): [string | null, string | null] => {
+  const raw = text(value);
+  if (!raw) return [null, null];
+  const matches = raw.match(/\d+(?:\.\d+)?/g) ?? [];
+  return [matches[0] ?? null, matches[1] ?? matches[0] ?? null];
+};
 
 export type ProviderProductCard = {
   id: string;
@@ -44,9 +50,7 @@ export function normalizeCJList(payload: unknown): {
       const item = record(value);
       const id = text(item.pid, item.productId, item.id);
       if (!id) return [];
-      const priceRange = (text(item.sellPrice) ?? "")
-        .split(/\s*--\s*/)
-        .filter(Boolean);
+      const [priceMin, priceMax] = priceRange(item.sellPrice);
       return [
         {
           id,
@@ -60,11 +64,9 @@ export function normalizeCJList(payload: unknown): {
           sku: text(item.productSku, item.sku),
           image: text(item.productImage, item.bigImage, item.image),
           priceMin:
-            priceRange[0] ??
-            text(item.discountPrice, item.nowPrice, item.price),
+            priceMin ?? text(item.discountPrice, item.nowPrice, item.price),
           priceMax:
-            priceRange[1] ??
-            priceRange[0] ??
+            priceMax ??
             text(
               item.maxSellPrice,
               item.discountPrice,
@@ -83,6 +85,7 @@ export function normalizeCJList(payload: unknown): {
 
 export function normalizeCJProduct(payload: unknown): JsonRecord {
   const item = record(record(payload).data);
+  const [priceMin, priceMax] = priceRange(item.sellPrice ?? item.price);
   return {
     id: text(item.pid, item.productId, item.id),
     title: text(item.productNameEn, item.productName, item.name),
@@ -93,7 +96,9 @@ export function normalizeCJProduct(payload: unknown): JsonRecord {
       return image ? [image] : [];
     }),
     image: text(item.productImage, item.bigImage, item.image),
-    price: text(item.sellPrice, item.price),
+    price: priceMin,
+    priceMin,
+    priceMax,
     currency: text(item.currency) ?? "USD",
     weight: text(item.productWeight, item.weight),
     dimensions: {

@@ -75,7 +75,7 @@ test("Simple Admin supports a non-technical operator draft workflow", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "ANTERIOR" }).click();
   await page.getByRole("button", { name: "ADICIONAR" }).click();
-  await expect(page.getByText("PRODUTO ADICIONADO")).toBeVisible();
+  await expect(page.getByText("PRODUTO ADICIONADO").first()).toBeVisible();
   await page.getByRole("link", { name: "ABRIR NA MINHA VITRINE" }).click();
   await expect(
     page.getByRole("heading", {
@@ -268,11 +268,16 @@ test("CJ add reports each stage, completes, and explains duplicate import", asyn
         body: JSON.stringify(
           importAttempts === 1
             ? { product: { id: "prod_staged" } }
-            : {
-                code: "CJ_PRODUCT_ALREADY_IMPORTED",
-                message: "Este produto já está na sua vitrine.",
-                productId: "prod_staged",
-              },
+            : importAttempts === 2
+              ? {
+                  code: "CJ_PRODUCT_ALREADY_IMPORTED",
+                  message: "Este produto já está na sua vitrine.",
+                  productId: "prod_staged",
+                }
+              : {
+                  code: "SHIPPING_PROFILE_MISSING",
+                  message: "Configure um perfil de entrega.",
+                },
         ),
       });
     },
@@ -285,6 +290,9 @@ test("CJ add reports each stage, completes, and explains duplicate import", asyn
   await page.getByRole("button", { name: "BUSCAR NO CJ" }).click();
   await page.getByLabel("Buscar no CJ").fill("flashlight");
   await page.getByRole("button", { name: "BUSCAR", exact: true }).click();
+  const importCard = page.locator("article", {
+    hasText: "Fixture CJ Staged Import",
+  });
   await page.getByRole("button", { name: "ADICIONAR" }).click();
   await expect(
     page.locator(".state", { hasText: "Buscando detalhes..." }),
@@ -295,7 +303,8 @@ test("CJ add reports each stage, completes, and explains duplicate import", asyn
   await expect(
     page.locator(".state", { hasText: "Criando rascunho..." }),
   ).toBeVisible();
-  await expect(page.getByText("PRODUTO ADICIONADO")).toBeVisible();
+  await expect(page.getByText("PRODUTO ADICIONADO").first()).toBeVisible();
+  await expect(importCard.getByText("✓ PRODUTO ADICIONADO")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "ABRIR NA MINHA VITRINE" }),
   ).toHaveAttribute("href", "/vitrine?produto=prod_staged");
@@ -305,7 +314,16 @@ test("CJ add reports each stage, completes, and explains duplicate import", asyn
   await expect(
     page.getByText("Este produto já está na sua vitrine."),
   ).toBeVisible();
-  expect(importAttempts).toBe(2);
+  await expect(
+    importCard.getByText("ESTE PRODUTO JÁ ESTÁ NA VITRINE"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "ADICIONAR" }).click();
+  await expect(
+    importCard.getByText(
+      /ERRO: A estrutura de entrega da loja está incompleta/,
+    ),
+  ).toBeVisible();
+  expect(importAttempts).toBe(3);
 });
 
 test("Simple Admin remains usable with malformed, offline, and expired responses", async ({
