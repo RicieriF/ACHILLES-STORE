@@ -14,24 +14,15 @@ operacional fail-closed até a TASK 014.
 
 ### Forma simples no Windows
 
-**Como configurar pela primeira vez**
+**Uso normal:** dê duplo clique somente em `ACHILLES_STORE.bat`.
 
-1. Clique em `SETUP_ACHILLES.bat`.
-2. Espere a mensagem `CONFIGURAÇÃO CONCLUÍDA`.
+O Control Center oferece configuração inicial/reparo, ligar, desligar,
+reiniciar, status, atualização, debug, logs, acessos, autostart e um único
+atalho de Desktop. A loja e o Painel Admin só são abertos depois dos
+healthchecks. O banco e os volumes nunca são apagados.
 
-**Como ligar**
-
-Clique no atalho **ACHILLES STORE** ou em `START_ACHILLES.bat`. O navegador abre
-a loja em `http://localhost:3000` e o Simple Admin em
-`http://localhost:3001` somente depois dos healthchecks.
-
-**Como desligar**
-
-Clique em **ACHILLES STORE - PARAR** ou em `STOP_ACHILLES.bat`. O banco e os
-volumes nunca são apagados.
-
-Consulte `docs/LOCAL_LAUNCHER.md` para status, restart, atualização, atalhos e
-debug. O Medusa Admin permanece em `http://localhost:9000/app` como fallback.
+Consulte `docs/LOCAL_LAUNCHER.md` para detalhes. O Admin Avançado permanece em
+`http://localhost:9000/app` como fallback técnico.
 
 ### Forma técnica
 
@@ -40,7 +31,7 @@ debug. O Medusa Admin permanece em `http://localhost:9000/app` como fallback.
 3. Inicie PostgreSQL com `pnpm docker:up` e aguarde o healthcheck.
 4. Execute migrações oficiais e próprias com `pnpm db:migrate`.
 5. Opcionalmente, carregue os dados fictícios com `pnpm seed`.
-6. Inicie commerce/admin e storefront com `pnpm dev` ou use `ACHILLES-STORE.bat`.
+6. Inicie commerce/admin e storefront com `pnpm dev` ou use `ACHILLES_STORE.bat`.
 
 O `.env` da raiz é a única fonte local do monorepo. Commerce e storefront
 localizam a raiz pelo `pnpm-workspace.yaml`; não copie `.env` para os apps e não
