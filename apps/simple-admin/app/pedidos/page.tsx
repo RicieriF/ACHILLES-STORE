@@ -4,11 +4,18 @@ import { Shell, Loading, ErrorState, money } from "../../components/shell";
 import { api } from "../../lib/api";
 import type { Order } from "../../lib/types";
 const status: Record<string, string> = {
-  PAID: "PAGAMENTO RECEBIDO",
-  APPROVAL_REQUIRED: "AGUARDANDO FORNECEDOR",
-  APPROVED: "PEDIDO AO FORNECEDOR",
+  PAYMENT_PENDING: "NOVO",
+  PAID: "PAGO",
+  FULFILLMENT_REVIEW: "AGUARDANDO FORNECEDOR",
+  SUPPLIER_APPROVAL_REQUIRED: "AGUARDANDO FORNECEDOR",
+  SUPPLIER_APPROVED: "PEDIDO AO FORNECEDOR",
+  ORDERING_SUPPLIER: "PEDIDO AO FORNECEDOR",
+  SUPPLIER_CONFIRMED: "PEDIDO AO FORNECEDOR",
+  IN_FULFILLMENT: "PEDIDO AO FORNECEDOR",
   SHIPPED: "ENVIADO",
-  DELIVERED: "ENTREGUE",
+  DELIVERED: "CONCLUÍDO",
+  EXCEPTION: "PRECISA DE ATENÇÃO",
+  CANCELLED: "CANCELADO",
 };
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>();
@@ -111,7 +118,7 @@ export default function Orders() {
                     </span>
                   </td>
                   <td>
-                    {o.status === "APPROVAL_REQUIRED" && (
+                    {o.status === "SUPPLIER_APPROVAL_REQUIRED" && (
                       <button
                         disabled={Boolean(busy)}
                         onClick={() => void approve(o)}

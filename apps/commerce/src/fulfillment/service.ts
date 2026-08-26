@@ -758,19 +758,39 @@ export class FulfillmentService {
 
   async listAdmin(): Promise<Record<string, unknown>[]> {
     const result = await this.database.raw<Record<string, unknown>>(
-      `select co.id, co.reference, co.status, co.total_paid, co.currency, co.customer_snapshot, co.created_at,
+      `select co.id, co.reference, co.status, co.total_paid, co.currency, co.customer_snapshot, co.items_snapshot, co.created_at,
        pi.status as payment_status, sfp.status as gate_status,
        (select count(*)::int from order_exception oe where oe.customer_order_id = co.id and oe.status = 'OPEN' and oe.deleted_at is null) as open_exceptions
        from customer_order co join payment_intent pi on pi.id = co.payment_intent_id
        left join supplier_fulfillment_plan sfp on sfp.customer_order_id = co.id and sfp.deleted_at is null
        where co.deleted_at is null order by co.created_at desc limit 100`,
     );
-    return result.rows.map((row) => ({
-      ...row,
-      customer_snapshot: maskCustomer(
+    return result.rows.map((row) => {
+      const customer = maskCustomer(
         parseJson(row.customer_snapshot as string | Record<string, unknown>),
-      ),
-    }));
+      );
+      const items = parseJson<Item[]>(row.items_snapshot as string | Item[]);
+      return {
+        id: row.id,
+        reference: row.reference,
+        status: row.status,
+        total: Number(row.total_paid),
+        total_paid: row.total_paid,
+        currency: row.currency,
+        customer,
+        customer_snapshot: customer,
+        items: items.map((item) => ({
+          title: item.productTitle,
+          variantTitle: item.variantTitle,
+          quantity: item.quantity,
+        })),
+        items_snapshot: items,
+        paymentStatus: row.payment_status,
+        gateStatus: row.gate_status,
+        openExceptions: row.open_exceptions,
+        createdAt: new Date(row.created_at as string | Date).toISOString(),
+      };
+    });
   }
 
   async adminDetail(customerOrderId: string): Promise<Record<string, unknown>> {

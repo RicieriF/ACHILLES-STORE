@@ -559,13 +559,39 @@ test("TASK 012 cenário A: paid order, aprovação humana, sandbox e tracking p�
   );
   expect(list.status()).toBe(200);
   const listed = (await list.json()) as {
-    orders: Array<{ id: string; reference: string }>;
+    orders: Array<{
+      id: string;
+      reference: string;
+      total: number;
+      customer: { name: string; email: string };
+      items: Array<{ title: string; quantity: number }>;
+    }>;
   };
   const order = listed.orders.find(
     (candidate) => candidate.reference === paid.reference,
   );
   expect(order).toBeTruthy();
   if (!order) throw new Error("Customer Order não apareceu no Admin");
+  expect(order.total).toBeGreaterThan(0);
+  expect(order.customer).toMatchObject({ name: "C***" });
+  expect(order.customer.email).toContain("***@");
+  expect(order.items[0]).toMatchObject({ quantity: 1 });
+  expect(order.items[0]?.title).toBeTruthy();
+  const customers = await request.get(
+    "http://localhost:9000/admin/achilles/operations/customers",
+    { headers },
+  );
+  expect(customers.status()).toBe(200);
+  expect(await customers.json()).toMatchObject({
+    customers: expect.arrayContaining([
+      expect.objectContaining({
+        email: "sandbox@example.com",
+        name: "Cliente Sandbox",
+        orderCount: expect.any(Number),
+        totalSpent: expect.any(Number),
+      }),
+    ]),
+  });
   const detailBefore = await request.get(
     `http://localhost:9000/admin/achilles/orders/${order.id}`,
     { headers },
