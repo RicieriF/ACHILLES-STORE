@@ -1,7 +1,6 @@
 "use client";
 
 import type { PublicCartDTO } from "@achilles/domain";
-import Image from "next/image";
 import Link from "next/link";
 import {
   createContext,
@@ -16,6 +15,7 @@ import { Drawer } from "../ui/interactive";
 import { IconButton } from "../ui/primitives";
 import { MinusIcon, PlusIcon } from "../ui/icons";
 import { ShippingCalculator } from "../store/shipping-calculator";
+import { SafeProductImage } from "../store/safe-product-image";
 
 const storageKey = "achilles_cart_id";
 
@@ -161,12 +161,8 @@ function CartContents({ value }: { value: CartContextValue }) {
       <div className="cart-items">
         {cart.items.map((item) => (
           <article className="cart-item" key={item.id}>
-            <Image
-              src={
-                item.thumbnail?.startsWith("/")
-                  ? item.thumbnail
-                  : "/images/product-placeholder.svg"
-              }
+            <SafeProductImage
+              src={item.thumbnail}
               alt=""
               width={92}
               height={112}

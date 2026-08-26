@@ -9,4 +9,13 @@ describe("storefront baseline", () => {
     expect(source).not.toContain("SupplierOffer");
     expect(source).not.toContain("MOQ");
   });
+
+  it("distinguishes catalog failure from an empty successful catalog", async () => {
+    const source = (await import("./page")).default.toString();
+    expect(source).toContain(
+      "Não foi possível carregar os produtos. Tente novamente.",
+    );
+    expect(source).toContain("Ainda não há produtos disponíveis.");
+    expect(source).not.toContain("O catálogo não respondeu");
+  });
 });

@@ -47,7 +47,7 @@ test("operational import price publish and tracking stay on Achilles pages", asy
           source_currency: "USD",
           source_price_min: "8.50",
           category_suggested: "Lanternas",
-          media: ["https://example.invalid/operational-product.png"],
+          media: ["https://oss-cf.cjdropshipping.com/example/product.jpg"],
         },
       })
     ).status(),
@@ -133,6 +133,18 @@ test("operational import price publish and tracking stay on Achilles pages", asy
     path: `${evidenceDirectory}/storefront-published-product.png`,
     fullPage: true,
   });
+
+  await page.goto("http://localhost:3000");
+  await expect(
+    page.locator("article").filter({ hasText: title }),
+  ).toBeVisible();
+  await expect(
+    page.locator("article").filter({ hasText: "Lanterna de Desenvolvimento" }),
+  ).toBeVisible();
+  await expect(page.getByText("O catálogo não respondeu")).toHaveCount(0);
+  await expect(
+    page.getByText("Não foi possível carregar os produtos"),
+  ).toHaveCount(0);
 
   await page.goto(`${commerceUrl}/app/achilles`);
   await expect(page.getByRole("heading", { name: "Início" })).toBeVisible();

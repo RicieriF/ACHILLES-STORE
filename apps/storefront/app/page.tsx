@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CategoryCard } from "../components/store/category-card";
 import { ProductCard } from "../components/store/product-card";
+import { SafeProductImage } from "../components/store/safe-product-image";
 import { ArrowIcon } from "../components/ui/icons";
 import {
   Container,
@@ -117,12 +118,11 @@ export default async function HomePage() {
           />
           {!catalog ? (
             <ErrorState>
-              O catálogo não respondeu. Tente novamente em alguns instantes.
+              Não foi possível carregar os produtos. Tente novamente.
             </ErrorState>
           ) : highlights.length === 0 ? (
-            <EmptyState title="Curadoria em preparação">
-              Os primeiros equipamentos aparecerão aqui após a revisão
-              comercial.
+            <EmptyState title="Ainda não há produtos disponíveis.">
+              Novos equipamentos serão exibidos após a revisão comercial.
             </EmptyState>
           ) : (
             <div className="product-grid">
@@ -256,7 +256,7 @@ export default async function HomePage() {
                   Conhecer produto <ArrowIcon />
                 </Link>
               </div>
-              <Image
+              <SafeProductImage
                 src={newest.images[0]?.url ?? "/images/product-placeholder.svg"}
                 alt={newest.title}
                 width={620}

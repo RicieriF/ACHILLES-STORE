@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { PublicProductDTO } from "@achilles/domain";
 import { ArrowIcon } from "../ui/icons";
 import { Badge, Price } from "../ui/primitives";
+import { SafeProductImage } from "./safe-product-image";
 
 export const ProductCard = ({ product }: { product: PublicProductDTO }) => (
   <article className="product-card">
@@ -11,7 +11,7 @@ export const ProductCard = ({ product }: { product: PublicProductDTO }) => (
       className="product-card__image"
       aria-label={`Ver ${product.title}`}
     >
-      <Image
+      <SafeProductImage
         src={product.images[0]?.url ?? "/images/product-placeholder.svg"}
         alt=""
         fill

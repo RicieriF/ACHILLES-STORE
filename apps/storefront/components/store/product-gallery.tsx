@@ -1,8 +1,8 @@
 "use client";
 
 import type { PublicImageDTO } from "@achilles/domain";
-import Image from "next/image";
 import { useState } from "react";
+import { SafeProductImage } from "./safe-product-image";
 
 export function ProductGallery({
   title,
@@ -26,7 +26,7 @@ export function ProductGallery({
   return (
     <section className="product-gallery" aria-label="Galeria do produto">
       <div className="product-gallery__main">
-        <Image
+        <SafeProductImage
           key={selected.id}
           src={selected.url}
           alt={selected.alt}
@@ -45,7 +45,7 @@ export function ProductGallery({
               setActive(index);
             }}
           >
-            <Image src={image.url} alt="" width={90} height={90} />
+            <SafeProductImage src={image.url} alt="" width={90} height={90} />
           </button>
         ))}
       </div>
