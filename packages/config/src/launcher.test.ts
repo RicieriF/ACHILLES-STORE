@@ -1,40 +1,54 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { findWorkspaceRoot } from "./index.js";
 
 describe("Windows launcher", () => {
-  it("waits for both health checks before opening store and Admin", () => {
-    const launcher = readFileSync(
-      join(findWorkspaceRoot(process.cwd()), "ACHILLES-STORE.bat"),
+  const root = findWorkspaceRoot(process.cwd());
+  const batch = () => readFileSync(join(root, "ACHILLES_STORE.bat"), "utf8");
+  const powershell = () =>
+    readFileSync(
+      join(root, "scripts", "launcher", "achilles-launcher.ps1"),
       "utf8",
     );
-    const commerce = launcher.indexOf(
-      'call :wait_url "http://localhost:9000/ready"',
-    );
-    const storefront = launcher.indexOf(
-      'call :wait_url "http://localhost:3000/api/health"',
-    );
-    const openStore = launcher.indexOf('start "" "http://localhost:3000"');
-    const openAdmin = launcher.indexOf('start "" "http://localhost:9000/app"');
-    expect(commerce).toBeGreaterThan(0);
-    expect(storefront).toBeGreaterThan(commerce);
-    expect(openStore).toBeGreaterThan(storefront);
-    expect(openAdmin).toBeGreaterThan(openStore);
-    expect(launcher).toMatch(/timeout/i);
+
+  it("offers one human entrypoint and routes every supported argument", () => {
+    const launcher = batch();
+    expect(
+      readdirSync(root).filter((name) => name.toLowerCase().endsWith(".bat")),
+    ).toEqual(["ACHILLES_STORE.bat"]);
+    for (const argument of [
+      "--start",
+      "--stop",
+      "--restart",
+      "--status",
+      "--update",
+      "--setup",
+      "--debug",
+    ]) {
+      expect(launcher).toContain(`"${argument}"`);
+    }
+    expect(launcher).toContain("-Action %ACTION% %EXTRA%");
+    expect(launcher).toMatch(/:START_SILENT[\s\S]*-NoOpen/);
   });
 
-  it("prepares the idempotent store structure after migrations", () => {
-    const launcher = readFileSync(
-      join(
-        findWorkspaceRoot(process.cwd()),
-        "scripts",
-        "launcher",
-        "achilles-launcher.ps1",
-      ),
-      "utf8",
-    );
+  it("preserves health, recovery and idempotent structure protections", () => {
+    const launcher = powershell();
     expect(launcher).toMatch(/pnpm db:migrate[\s\S]*pnpm seed:production/);
     expect(launcher).toContain("Migrations e estrutura mínima");
+    expect(launcher).toMatch(/StatusCode -ge 200 -and \$r\.StatusCode -lt 300/);
+    expect(launcher).toContain("achilles_store_e2e");
+    expect(launcher).toContain("não pertence ao launcher Achilles");
+    expect(launcher).toContain("está ocupada por outro aplicativo");
+    expect(launcher).toMatch(/Test-PostgresContainer[\s\S]*Health\.Status/);
+  });
+
+  it("uses the unified entrypoint for one shortcut and non-interactive autostart", () => {
+    const launcher = powershell();
+    expect(launcher).toContain('"ACHILLES_STORE.bat"');
+    expect(launcher).toContain("--start");
+    expect(launcher).toContain('"ACHILLES STORE.lnk"');
+    expect(launcher).not.toContain("START_ACHILLES.bat");
+    expect(launcher.match(/CreateShortcut/g)).toHaveLength(1);
   });
 });
